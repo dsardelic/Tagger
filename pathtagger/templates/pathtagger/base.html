@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>{% block head_title %}{% endblock %}</title>
+        {% load static %}
+        <link rel="stylesheet" href="{% static 'pathtagger/css/style.css' %}">
+        <script src="{% static 'pathtagger/js/scripts.js' %}"></script>
+    </head>
+    <body>
+        <ul class="menubar">
+            <li><a class="active" href="#">Homepage</a></li>
+            <li><a href="#">Tag paths</a></li>
+            <li><a href="#">Tags</a></li>
+            <li><a href="#">Mappings</a></li>
+        </ul>
+        <div class="content-title">{% block content_title %}{% endblock %}</div>
+        {% block content %}{% endblock %}
+    </body>
+</html>
