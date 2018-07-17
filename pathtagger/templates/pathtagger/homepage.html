@@ -1,0 +1,33 @@
+{% extends 'pathtagger/base.html' %}
+{% block head_title %} Tagger - Homepage {% endblock %}
+{% block content_title %} Homepage {% endblock %}
+{% block content %}
+<div class="left">Welcome to tagger!</div>
+<div class="right">
+    <div class="div-title">FAVORITE PATHS</div>
+    <table>
+        <tr>
+            <th>Path</th>
+            <th>Actions</th>
+        </tr>
+        {% for favorite_path in favorite_paths|dictsort:'path' %}
+            <tr>
+                <td {% if not favorite_path.exists %} class="nonexistent" title="Nonexistent path" {% endif %} style="text-align:left;">
+                    {% if favorite_path.is_folder %}
+                        <a href="{% url 'pathtagger:path_details' path=favorite_path.path %}">{{ favorite_path.path }}</a>
+                    {% else %}
+                        {{ favorite_path.path }}
+                    {% endif %}
+                </td>
+                <td>
+                    <form action="{% url 'pathtagger:toggle_favorite_path' %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="favorite_id" value="{{ favorite_path.id }}"/>
+                        <input type="submit" value="Remove"/>
+                    </form>
+                </td>
+            </tr>
+        {% endfor %}
+    </table>
+</div>
+{% endblock %}

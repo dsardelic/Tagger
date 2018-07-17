@@ -1,11 +1,14 @@
-from django.http import HttpResponse
 from django.shortcuts import render, redirect
 
-from . import db_operations
+from . import db_operations as db
 
 
 def homepage(request):
-    pass
+    return render(
+        request,
+        'pathtagger/homepage.html',
+        {"favorite_paths": db.get_favorite_paths()}
+    )
 
 
 def mapping_details(request):
