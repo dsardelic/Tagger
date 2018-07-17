@@ -3,14 +3,6 @@ from django.shortcuts import render, redirect
 from . import db_operations as db
 
 
-def homepage(request):
-    return render(
-        request,
-        'pathtagger/homepage.html',
-        {"favorite_paths": db.get_favorite_paths()}
-    )
-
-
 def mapping_details(request):
     pass
 
@@ -57,3 +49,15 @@ def edit_path_tags(request):
 
 def toggle_favorite_path(request):
     pass
+
+
+def root_path_redirect(request):
+    pass
+
+
+def homepage(request):
+    return render(
+        request,
+        'pathtagger/homepage.html',
+        {"favorite_paths": db.get_favorite_paths()}
+    )

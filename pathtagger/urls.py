@@ -21,5 +21,6 @@ urlpatterns = [
     path('pathtagsedit/', views.edit_path_tags, name='edit_path_tags'),
 
     path('togglefavoritepath/', views.toggle_favorite_path, name='toggle_favorite_path'),
+    path('rootpathredirect/', views.root_path_redirect, name='root_path_redirect'),
     path('', views.homepage, name='homepage'),
 ]
