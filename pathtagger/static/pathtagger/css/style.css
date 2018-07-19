@@ -31,13 +31,10 @@ ul.menubar li a:hover {
     background-color: #111;
 }
 
-.title {
-    margin-bottom: 20px;
-}
-
 table {
     border-collapse: collapse;
     width: 100%;
+    border: 1px solid #ddd;
 }
 
 table tr:nth-child(even) {
@@ -82,11 +79,12 @@ table th {
     margin-bottom: 20px;
 }
 
-.nonexistent {
+.nonexistent-path {
     color: red;
 }
 
 button, input[type="button"], input[type="submit"] {
+    background-color: #d9d9d9;
     border: 1px solid black;
     border-radius: 4px;
     padding: 1px 3px;
