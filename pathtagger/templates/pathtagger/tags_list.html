@@ -1,0 +1,64 @@
+{% extends 'pathtagger/base.html' %}
+{% block head_title %} Tagger - Tags list {% endblock %}
+{% block content_title %} Tags list {% endblock %}
+{% block content %}
+<div class="left">
+    {% if tags %}
+        <form id="deleteTagsForm" action="{% url 'pathtagger:delete_tags' %}" method="POST"/>
+        <table style="margin-bottom:20px;">
+            <tr>
+                <th><input type="checkbox" onclick="toggle_all_checkboxes(this, 'tag_id');"></th>
+                <th>Tag</th>
+                <th>Occurrences</th>
+                <th>Actions</th>
+            </tr>
+            {% for tag in tags|dictsort:'name' %}
+                <tr>
+                    <td>
+                        <input form="deleteTagsForm" type="checkbox" name="tag_id" value="{{ tag.doc_id }}"/>
+                    </td>
+                    <td>
+                        <form id="editTag_{{ tag.doc_id }}_Form1" action="{% url 'pathtagger:tag_details' tag_id=tag.doc_id %}" method="GET" style="display:inline-block;">
+                            <input form="editTag_{{ tag.doc_id }}_Form1" type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}"/>
+                            <input form="editTag_{{ tag.doc_id }}_Form1" type="submit" value="{{ tag.name }}" class="tag" style="background-color:{{ tag.color }}"/>
+                        </form>
+                    </td>
+                    <td>{{ tag.occurrences }}</td>
+                    <td style='white-space: nowrap'>
+                        <form id="editTag_{{ tag.doc_id }}_Form2" action="{% url 'pathtagger:tag_details' tag_id=tag.doc_id %}" method="GET" style="display:inline-block;">
+                            <input form="editTag_{{ tag.doc_id }}_Form2" type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}"/>
+                            <input form="editTag_{{ tag.doc_id }}_Form2" type="submit" value="Edit"/>
+                        </form>
+                        <form id="deleteTag_{{ tag.doc_id }}_Form" action="{% url 'pathtagger:delete_tags' %}" method="POST" style="display:inline-block;">
+                            <input form="deleteTag_{{ tag.doc_id }}_Form" type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}"/>
+                            <input form="deleteTag_{{ tag.doc_id }}_Form" type="hidden" name="tag_id" value="{{ tag.doc_id }}"/>
+                            <input form="deleteTag_{{ tag.doc_id }}_Form" type="submit" value="Delete"/>
+                        </form>
+                    </td>
+                </tr>
+            {% endfor %}
+        </table>
+        <input form="deleteTagsForm" type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}"/>
+        <input form="deleteTagsForm" type="submit" value="Delete selected"/>
+    {% else %}
+        There are currently no defined tags.
+    {% endif %}
+</div>
+<div class="right">
+    <div class="div-title">NEW TAG</div>
+    <form id="createTagForm" action="{% url 'pathtagger:add_tag' %}" method="POST">
+        <table class="invisible" style="margin-bottom:20px;">
+            <tr>
+                <td style="text-align:left;">Name: </td>
+                <td style="text-align:left;"><input form="createTagForm" type="text" name="name"/></td>
+            </tr>
+            <tr>
+                <td style="text-align:left;">Color:</td>
+                <td style="text-align:left;"><input form="createTagForm" type="color" name="color"/></td>
+            </tr>
+        </table>
+        <input form="createTagForm" type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}"/>
+        <input form="createTagForm" type="submit" value="Create"/>
+    </form>
+</div>
+{% endblock %}

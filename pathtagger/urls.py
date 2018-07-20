@@ -15,6 +15,7 @@ urlpatterns = [
     path('tags/<int:tag_id>/', views.tag_details, name='tag_details'),
     path('tags/delete/', views.delete_tags, name='delete_tags'),
     path('tags/', views.tags_list, name='tags_list'),
+    path('tag/add/', views.add_tag, name='add_tag'),
     path('tag/removefrommappings/', views.remove_tag_from_mappings, name='remove_tag_from_mappings'),
 
     path('path/<path:path>', views.path_details, name='path_details'),

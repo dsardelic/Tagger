@@ -3,7 +3,7 @@ html {
     overflow: -moz-scrollbars-vertical; 
     overflow-y: scroll;
     font-family: Arial, "MS Trebuchet", sans-serif;
-    font-size: medium;
+    font-size: large;
 }
 
 
@@ -32,6 +32,7 @@ ul.menubar li a:hover {
 }
 
 table {
+    font-size: large;
     border-collapse: collapse;
     width: 100%;
     border: 1px solid #ddd;
@@ -46,6 +47,7 @@ table tr:hover {
 }
 
 table td, table th {
+    font-size: large;
     border: 1px solid #ddd;
     padding: 3px 5px;
     text-align: center;
@@ -55,6 +57,24 @@ table th {
     background-color: #333;
     color: white;
     padding: 10px;
+}
+
+table.invisible {
+    border: 0px;
+}
+
+table.invisible tr:nth-child(even) {
+    background-color: unset;
+}
+
+table.invisible tr:hover {
+    background-color: unset;
+}
+
+table.invisible td, table.invisible th {
+    font-size: large;
+    border: 0;
+    padding: 3px 5px;
 }
 
 .left {
@@ -85,12 +105,21 @@ table th {
 
 button, input[type="button"], input[type="submit"] {
     background-color: #d9d9d9;
+    font-size: medium;
     border: 1px solid black;
     border-radius: 4px;
-    padding: 1px 3px;
+    padding: 3px;
     text-align: center;
     text-decoration: none;
     display: inline-block;
     margin: 0px 3px;
     cursor: pointer;
+}
+
+input[type="submit"].tag {
+    font-weight: bold;
+    color: white;
+    margin: 0px;
+    padding: 0px 2px;
+    border: none;
 }

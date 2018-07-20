@@ -28,12 +28,29 @@ def tag_details(request):
     pass
 
 
+def add_tag(request):
+    name = request.POST.get('name', '')
+    color = request.POST.get('color', '')
+    if name and color and not db.get_tags(name):
+        db.insert_tag(name, color)
+    return redirect('pathtagger:tags_list')
+
+
 def delete_tags(request):
-    pass
+    tag_ids = request.POST.getlist('tag_id', [])
+    db.delete_tags(map(int, tag_ids))
+    return redirect('pathtagger:tags_list')
 
 
 def tags_list(request):
-    pass
+    tags = db.get_all_tags()
+    for tag in tags:
+        tag['occurrences'] = len(db.get_tag_mappings(tag.doc_id))
+    return render(
+        request,
+        'pathtagger/tags_list.html',
+        {"tags": tags}
+    )
 
 
 def remove_tag_from_mappings(request):

@@ -31,3 +31,24 @@ def insert_favorite_path(path):
 
 def delete_favorite_path(path):
     db.table('favorite_paths').remove(where('path') == path)
+
+
+def get_all_tags():
+    return db.table('tags').all()
+
+
+def get_tags(name):
+    return db.table('tags').search(where('name') == name)
+
+
+def insert_tag(name, color):
+    db.table('tags').insert({'name': name, 'color': color})
+
+
+def delete_tags(tag_ids):
+    if tag_ids:
+        db.table('tags').remove(doc_ids=tag_ids)
+
+
+def get_tag_mappings(tag_id):
+    return db.search(Query().tags.all([str(tag_id)]))
