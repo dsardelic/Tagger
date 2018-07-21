@@ -114,12 +114,33 @@ button, input[type="button"], input[type="submit"] {
     display: inline-block;
     margin: 0px 3px;
     cursor: pointer;
+    color: black;
 }
 
-input[type="submit"].tag {
-    font-weight: bold;
-    color: white;
-    margin: 0px;
-    padding: 0px 2px;
+input[type="text"] {
+    font-size: inherit;
+}
+
+a.tag, a.button {
+    background-color: #d9d9d9;
+    border-radius: 4px;
+    display: inline-block;
+    font-size: medium;
+    text-align: center;
+    text-decoration: none;
+}
+
+a.tag {
     border: none;
+    color: white;
+    font-weight: bold;
+    margin: 0px;
+    padding: 2px;
+}
+
+a.button {
+    border: 1px solid black;
+    color: black;
+    margin: 0px 3px;
+    padding: 3px;
 }

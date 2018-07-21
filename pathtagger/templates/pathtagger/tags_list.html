@@ -4,7 +4,7 @@
 {% block content %}
 <div class="left">
     {% if tags %}
-        <form id="deleteTagsForm" action="{% url 'pathtagger:delete_tags' %}" method="POST"/>
+        <form id="deleteTagsForm" action="{% url 'pathtagger:delete_tags' %}" method="POST"></form>
         <table style="margin-bottom:20px;">
             <tr>
                 <th><input type="checkbox" onclick="toggle_all_checkboxes(this, 'tag_id');"></th>
@@ -18,17 +18,13 @@
                         <input form="deleteTagsForm" type="checkbox" name="tag_id" value="{{ tag.doc_id }}"/>
                     </td>
                     <td>
-                        <form id="editTag_{{ tag.doc_id }}_Form1" action="{% url 'pathtagger:tag_details' tag_id=tag.doc_id %}" method="GET" style="display:inline-block;">
-                            <input form="editTag_{{ tag.doc_id }}_Form1" type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}"/>
-                            <input form="editTag_{{ tag.doc_id }}_Form1" type="submit" value="{{ tag.name }}" class="tag" style="background-color:{{ tag.color }}"/>
-                        </form>
+                        <a class="tag" style="background-color:{{ tag.color }}" href="{% url 'pathtagger:tag_details' tag_id=tag.doc_id %}">{{ tag.name }}</a>
                     </td>
-                    <td>{{ tag.occurrences }}</td>
+                    <td>
+                        {{ tag.occurrences }}
+                    </td>
                     <td style='white-space: nowrap'>
-                        <form id="editTag_{{ tag.doc_id }}_Form2" action="{% url 'pathtagger:tag_details' tag_id=tag.doc_id %}" method="GET" style="display:inline-block;">
-                            <input form="editTag_{{ tag.doc_id }}_Form2" type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}"/>
-                            <input form="editTag_{{ tag.doc_id }}_Form2" type="submit" value="Edit"/>
-                        </form>
+                        <a class="button" href="{% url 'pathtagger:tag_details' tag_id=tag.doc_id %}">Edit</a>
                         <form id="deleteTag_{{ tag.doc_id }}_Form" action="{% url 'pathtagger:delete_tags' %}" method="POST" style="display:inline-block;">
                             <input form="deleteTag_{{ tag.doc_id }}_Form" type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}"/>
                             <input form="deleteTag_{{ tag.doc_id }}_Form" type="hidden" name="tag_id" value="{{ tag.doc_id }}"/>
