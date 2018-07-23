@@ -40,15 +40,14 @@ def insert_tag(name, color):
 
 
 def delete_tags(tag_ids):
-    if tag_ids:
-        mappings = db.search(Query().tag_ids.any(list(map(str, tag_ids))))
-        for mapping in mappings:
-            mapping['tag_ids'] = list(
-                set(mapping['tag_ids']) - set(map(str, tag_ids))
-            )
-        db.write_back(mappings)
-        db.table('tags').remove(doc_ids=tag_ids)
-        remove_mappings_without_tags()
+    mappings = db.search(Query().tag_ids.any(list(map(str, tag_ids))))
+    for mapping in mappings:
+        mapping['tag_ids'] = list(
+            set(mapping['tag_ids']) - set(map(str, tag_ids))
+        )
+    db.write_back(mappings)
+    db.table('tags').remove(doc_ids=tag_ids)
+    remove_mappings_without_tags()
 
 
 def get_tag_mappings(tag_id):
@@ -85,3 +84,47 @@ def remove_tags_from_mappings(tag_ids, mapping_ids):
 
 def remove_mappings_without_tags():
     db.remove(Query().tag_ids.test(lambda x: len(x) == 0))
+
+
+def get_all_mappings():
+    return db.all()
+
+
+def insert_mapping(path, tag_ids=[]):
+    if path:
+        return db.insert({'path': path, 'tag_ids': tag_ids})
+
+
+def get_mapping_by_path(path):
+    return db.get(path=path)
+
+
+def delete_mappings(mapping_ids):
+    db.remove(doc_ids=mapping_ids)
+
+
+def update_mapping(mapping_id, path, tag_ids=None):
+    if tag_ids:
+        db.update(
+            {'path': path, 'tag_ids': tag_ids}, where('doc_id') == mapping_id
+        )
+    else:
+        db.update({'path': path}, where('doc_id') == mapping_id)
+
+
+def get_filtered_mappings(
+    tag_ids_to_include, tag_ids_to_exclude, path_name_like=None
+):
+    tag_ids_to_include = list(map(str, tag_ids_to_include))
+    tag_ids_to_exclude = list(map(str, tag_ids_to_exclude))
+    if path_name_like:
+        return db.search(
+            (Query().tag_ids.all(tag_ids_to_include)) &
+            (~(Query().tag_ids.any(tag_ids_to_exclude))) &
+            (Query().path.test(lambda x: x.find(path_name_like) > -1))
+        )
+    else:
+        return db.search(
+            (Query().tag_ids.all(tag_ids_to_include)) &
+            (~(Query().tag_ids.any(tag_ids_to_exclude)))
+        )

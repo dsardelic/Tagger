@@ -3,7 +3,7 @@ html {
     overflow: -moz-scrollbars-vertical; 
     overflow-y: scroll;
     font-family: Arial, "MS Trebuchet", sans-serif;
-    font-size: large;
+    font-size: medium;
 }
 
 
@@ -32,7 +32,7 @@ ul.menubar li a:hover {
 }
 
 table {
-    font-size: large;
+    font-size: medium;
     border-collapse: collapse;
     width: 100%;
     border: 1px solid #ddd;
@@ -46,8 +46,8 @@ table tr:hover {
     background-color: #ddd;
 }
 
-table td, table th {
-    font-size: large;
+table th, table td {
+    font-size: medium;
     border: 1px solid #ddd;
     padding: 3px 5px;
     text-align: center;
@@ -61,6 +61,7 @@ table th {
 
 table.invisible {
     border: 0px;
+    padding: 0px;
 }
 
 table.invisible tr:nth-child(even) {
@@ -71,10 +72,20 @@ table.invisible tr:hover {
     background-color: unset;
 }
 
-table.invisible td, table.invisible th {
-    font-size: large;
+table.invisible th, table.invisible td {
+    font-size: medium;
     border: 0;
-    padding: 3px 5px;
+    padding: 0px;
+}
+
+table.invisible td.label {
+    padding: 0px 4px 5px 0px;
+    text-align: right;
+}
+
+table.invisible td.input {
+    padding: 0px 0px 5px 0px;
+    text-align: left;
 }
 
 .left {
@@ -85,17 +96,18 @@ table.invisible td, table.invisible th {
     float:right;
 }
 
-.content-title {
-    margin: 30px 0px;
-    text-align: center;
+.content-title, .div-title {
     font-weight: bold;
-    font-size: larger;
+    text-align: center;
     text-transform: uppercase;
 }
 
+.content-title {
+    margin: 30px 0px;
+    font-size: large;
+}
+
 .div-title {
-    text-align: center;
-    font-weight: bold;
     margin-bottom: 20px;
 }
 
@@ -105,7 +117,7 @@ table.invisible td, table.invisible th {
 
 button, input[type="button"], input[type="submit"] {
     background-color: #d9d9d9;
-    font-size: medium;
+    font-size: smaller;
     border: 1px solid black;
     border-radius: 4px;
     padding: 3px;
@@ -125,7 +137,7 @@ a.tag, a.button {
     background-color: #d9d9d9;
     border-radius: 4px;
     display: inline-block;
-    font-size: medium;
+    font-size: smaller;
     text-align: center;
     text-decoration: none;
 }

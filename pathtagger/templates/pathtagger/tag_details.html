@@ -3,7 +3,38 @@
 {% block content_title %} Tag details: "{{ tag.name }}" {% endblock %}
 {% block content %}
 <div class="left">
+    <div class="div-title">TAG DETAILS</div>
+    <form id="TagEditForm" method="POST">
+        <table class="invisible" style="margin-bottom:20px;">
+            <tr>
+                <td class="label">Current name: </td>
+                <td class="input">
+                    <input type="text" value="{{ tag.name }}" disabled/>
+                </td>
+            </tr>
+            <tr>
+                <td class="label">New name: </td>
+                <td class="input">
+                    <input form="TagEditForm" type="text" name="name" value="{{ tag.name }}"/>
+                </td>
+            </tr>
+            <tr>
+                <td class="label">Color:</td>
+                <td class="input">
+                    <input form="TagEditForm" type="color" name="color" value="{{ tag.color }}"/>
+                </td>
+            </tr>
+        </table>
+        <input form="TagEditForm" type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}"/>
+        <input form="TagEditForm" type="hidden" name="tag_id" value="{{ tag.doc_id }}"/>
+        <div align="center">
+            <input form="TagEditForm" type="submit" value="Save"/>
+        </div>
+    </form>
+</div>
+<div class="left" style="margin-left:50px;">
     {% if mappings %}
+        <div class="div-title">Tag mappings</div>
         <form id="removeFromMappingsForm" action="{% url 'pathtagger:remove_tag_from_mappings' %}" method="POST"></form>
         <table style="margin-bottom:20px;">
             <tr>
@@ -52,27 +83,7 @@
     <form id="TagDeleteForm" action="{% url 'pathtagger:delete_tags' %}" method="POST">
         <input form="TagDeleteForm" type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}"/>
         <input form="TagDeleteForm" type="hidden" name="tag_id" value="{{ tag.doc_id }}"/>
-        <div align="center">
-            <input form="TagDeleteForm" type="submit" value="Delete"/>
-        </div>
-    </form>
-</div>
-<div class="right" style="margin-right:50px;">
-    <div class="div-title">TAG DETAILS</div>
-    <form id="TagEditForm" method="POST">
-        <table class="invisible" style="margin-bottom:20px;">
-            <tr>
-                <td style="text-align:left;">Name: </td>
-                <td style="text-align:left;"><input form="TagEditForm" type="text" name="name" value="{{ tag.name }}"/></td>
-            </tr>
-            <tr>
-                <td style="text-align:left;">Color:</td>
-                <td style="text-align:left;"><input form="TagEditForm" type="color" name="color" value="{{ tag.color }}"/></td>
-            </tr>
-        </table>
-        <input form="TagEditForm" type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}"/>
-        <input form="TagEditForm" type="hidden" name="tag_id" value="{{ tag.doc_id }}"/>
-        <input form="TagEditForm" type="submit" value="Save"/>
+        <input form="TagDeleteForm" type="submit" value="Delete"/>
     </form>
 </div>
 {% endblock %}

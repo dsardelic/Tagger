@@ -12,8 +12,8 @@
         </tr>
         {% for favorite_path in favorite_paths|dictsort:'path' %}
             <tr>
-                <td {% if not favorite_path.exists %} class="nonexistent-path" title="Nonexistent path" {% endif %} style="text-align:left;">
-                    {% if favorite_path.is_folder %}
+                <td {% if not favorite_path.path_exists %} class="nonexistent-path" title="Nonexistent path" {% endif %} style="text-align:left;">
+                    {% if favorite_path.path_is_folder %}
                         <a href="{% url 'pathtagger:path_details' path=favorite_path.path %}">{{ favorite_path.path }}</a>
                     {% else %}
                         {{ favorite_path.path }}

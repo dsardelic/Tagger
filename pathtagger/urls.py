@@ -6,16 +6,17 @@ from . import views
 app_name = 'pathtagger'
 
 urlpatterns = [
-    path('mappings/<int:mapping_id>/', views.mapping_details, name='mapping_details'),
+    path('mappings/<int:mapping_id>', views.mapping_details, name='mapping_details'),
+    path('mappings/add/', views.add_mapping, name='add_mapping'),
+    path('mappings/tags/edit/', views.edit_mappings_tags, name='edit_mappings_tags'),
     path('mappings/delete/', views.delete_mappings, name='delete_mappings'),
     path('mappings/', views.mappings_list, name='mappings_list'),
-    path('mapping/add/', views.add_mapping, name='add_mapping'),
     path('mapping/tags/edit/', views.edit_mapping_tags, name='edit_mapping_tags'),
 
     path('tags/<int:tag_id>/', views.tag_details, name='tag_details'),
+    path('tags/add/', views.add_tag, name='add_tag'),
     path('tags/delete/', views.delete_tags, name='delete_tags'),
     path('tags/', views.tags_list, name='tags_list'),
-    path('tag/add/', views.add_tag, name='add_tag'),
     path('tag/removefrommappings/', views.remove_tag_from_mappings, name='remove_tag_from_mappings'),
 
     path('path/<path:path>', views.path_details, name='path_details'),
