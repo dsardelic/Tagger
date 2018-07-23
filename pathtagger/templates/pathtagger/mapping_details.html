@@ -1,9 +1,9 @@
 {% extends 'pathtagger/base.html' %}
-{% block head_title %} Tagger - Mapping details: "{{ mapping.path }}" {% endblock %}
-{% block content_title %} Mapping details {% endblock %}
+{% block head_title %} Tagger - Mapping details: {{ mapping.path }} {% endblock %}
+{% block content_title %} Mapping details: <div style="text-transform:none;display:inline-block;">{{ mapping.path }}</div> {% endblock %}
 {% block content %}
 <div class="left">
-    <div class="div-title">Mapping details</div>
+    <div class="div-title">Path</div>
     <form id="EditMappingDetailsForm" method="POST">
         <table class="invisible" style="margin-bottom:20px;">
             <tr>
@@ -55,7 +55,7 @@
             {% endfor %}
         </table>
         <input form="RemoveMappingTagsForm" type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}"/>
-        <input form="RemoveMappingTagsForm" type="submit" value="Delete selected"/>
+        <input form="RemoveMappingTagsForm" type="submit" value="Remove selected"/>
     {% else %}
         This mapping currently has no tags.
     {% endif %}

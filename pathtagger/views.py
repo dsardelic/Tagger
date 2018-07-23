@@ -1,6 +1,9 @@
-from django.shortcuts import render, redirect
-from django.http import JsonResponse
 from pathlib import Path
+
+from django.http import JsonResponse
+from django.shortcuts import render, redirect
+
+from Tagger import ini_parser
 
 from . import db_operations as db
 
@@ -24,7 +27,9 @@ def mapping_details(request, mapping_id):
             request,
             'pathtagger/mapping_details.html',
             {
-                'mapping': get_extended_dataset([db.get_mapping(mapping_id)])[0],
+                'mapping': get_extended_dataset(
+                        [db.get_mapping(mapping_id)]
+                    ).pop(),
                 'tags': db.get_all_tags()
             }
         )
@@ -37,14 +42,48 @@ def mapping_details(request, mapping_id):
 
 def add_mapping(request):
     path = request.POST.get('path', '')
-    if path and not db.get_mapping_by_path(path):
-        mapping_id = db.insert_mapping(path, [])
+    if path:
+        mapping = db.get_mapping_by_path(path)
+        if not mapping:
+            mapping_id = db.insert_mapping(path, [])
+        else:
+            mapping_id = mapping.doc_id
         return redirect('pathtagger:mapping_details', mapping_id=mapping_id)
     return redirect('pathtagger:mappings_list')
 
 
+def edit_mappings(request):
+    if request.POST.get('action_delete'):
+        return delete_mappings(request)
+    if request.POST.get('action_edit_tags'):
+        return edit_mappings_tags(request)
+
+
 def edit_mappings_tags(request):
-    pass
+    mapping_ids = list(map(int, request.POST.getlist('mapping_id', [])))
+    if mapping_ids:
+        tag_ids_to_append, tag_ids_to_remove = [], []
+        for key in request.POST:
+            if key.startswith('tag_'):
+                value = request.POST.get(key, '')
+                if value == 'append':
+                    tag_ids_to_append.append(int(key.strip('tag_')))
+                elif value == 'remove':
+                    tag_ids_to_remove.append(int(key.strip('tag_')))
+        new_tag_names_str = request.POST.get('new_tag_names', '')
+        if new_tag_names_str:
+            for name in new_tag_names_str.strip(',').split(','):
+                name = name.strip()
+                tag = db.get_tag_by_name(name)
+                if tag:
+                    tag_ids_to_append.append(tag.doc_id)
+                else:
+                    tag_ids_to_append.append(
+                        db.insert_tag(name, ini_parser.DEFAULT_TAG_COLOR)
+                    )
+        db.append_tags_to_mappings(tag_ids_to_append, mapping_ids)
+        db.remove_tags_from_mappings(tag_ids_to_remove, mapping_ids)
+    return redirect('pathtagger:mappings_list')
 
 
 def delete_mappings(request):
@@ -60,14 +99,16 @@ def mappings_list(request):
         map(int, request.GET.getlist('tag_id_exclude', []))
     )
     path_name_like = request.GET.get('path_name_like', '')
-    path_type = request.GET.get('path_type', None)
-    if not path_type:
-        path_type = 'all'
+    path_type = request.GET.get('path_type', 'all')
     mappings = get_extended_dataset(
         db.get_filtered_mappings(
             tag_ids_to_include, tag_ids_to_exclude, path_name_like
         )
     )
+    if path_type == 'existent':
+        mappings = [mapping for mapping in mappings if mapping['path_exists']]
+    elif path_type == 'nonexistent':
+        mappings = [mapping for mapping in mappings if not mapping['path_exists']]
     filters = {}
     filters['tag_ids_to_include'] = tag_ids_to_include
     filters['tag_ids_to_exclude'] = tag_ids_to_exclude
@@ -77,7 +118,8 @@ def mappings_list(request):
         request,
         'pathtagger/mappings_list.html',
         {
-            'mappings': get_extended_dataset(mappings),
+            'mappings': mappings,
+            'no_mappings_at_all': len(db.get_all_mappings()) == 0,
             'filters': filters,
             'tags': db.get_all_tags()
         }
@@ -85,6 +127,7 @@ def mappings_list(request):
 
 
 def edit_mapping_tags(request):
+    # TODO: complete me
     pass
 
 
@@ -107,8 +150,9 @@ def tag_details(request, tag_id):
 
 
 def add_tag(request):
-    name, color = request.POST.get('name', ''), request.POST.get('color', '')
-    if name and color and not db.get_tag_by_name(name):
+    name = request.POST.get('name', '')
+    color = request.POST.get('color', ini_parser.DEFAULT_TAG_COLOR)
+    if name and not db.get_tag_by_name(name):
         db.insert_tag(name, color)
     return redirect('pathtagger:tags_list')
 
@@ -135,10 +179,12 @@ def remove_tag_from_mappings(request):
 
 
 def path_details(request, path):
+    # TODO: complete me
     pass
 
 
 def edit_path_tags(request):
+    # TODO: complete me
     pass
 
 
@@ -159,6 +205,7 @@ def toggle_favorite_path(request):
 
 
 def root_path_redirect(request):
+    # TODO: complete me
     pass
 
 

@@ -1,9 +1,9 @@
 {% extends 'pathtagger/base.html' %}
-{% block head_title %} Tagger - Tag details: "{{ tag.name }}" {% endblock %}
-{% block content_title %} Tag details: "{{ tag.name }}" {% endblock %}
+{% block head_title %} Tagger - Tag details: {{ tag.name }} {% endblock %}
+{% block content_title %} Tag details: <div style="text-transform:none;display:inline-block;">{{ tag.name }}</div> {% endblock %}
 {% block content %}
 <div class="left">
-    <div class="div-title">TAG DETAILS</div>
+    <div class="div-title">Details</div>
     <form id="TagEditForm" method="POST">
         <table class="invisible" style="margin-bottom:20px;">
             <tr>
@@ -34,7 +34,7 @@
 </div>
 <div class="left" style="margin-left:50px;">
     {% if mappings %}
-        <div class="div-title">Tag mappings</div>
+        <div class="div-title">Mappings</div>
         <form id="removeFromMappingsForm" action="{% url 'pathtagger:remove_tag_from_mappings' %}" method="POST"></form>
         <table style="margin-bottom:20px;">
             <tr>

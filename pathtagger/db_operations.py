@@ -1,14 +1,9 @@
-import configparser
-import os
-
 from tinydb import TinyDB, Query, where
 
-from Tagger import settings
+from Tagger import ini_parser
 
 
-config = configparser.ConfigParser()
-config.read(os.path.join(settings.BASE_DIR, 'Tagger.ini'))
-db = TinyDB(config['DEFAULT']['db_path'])
+db = TinyDB(ini_parser.DB_PATH)
 
 
 def get_all_favorite_paths():
@@ -36,7 +31,7 @@ def get_tag_by_name(name):
 
 
 def insert_tag(name, color):
-    db.table('tags').insert({'name': name, 'color': color})
+    return db.table('tags').insert({'name': name, 'color': color})
 
 
 def delete_tags(tag_ids):
@@ -96,7 +91,7 @@ def insert_mapping(path, tag_ids=[]):
 
 
 def get_mapping_by_path(path):
-    return db.get(path=path)
+    return db.get(where('path') == path)
 
 
 def delete_mappings(mapping_ids):
@@ -128,3 +123,12 @@ def get_filtered_mappings(
             (Query().tag_ids.all(tag_ids_to_include)) &
             (~(Query().tag_ids.any(tag_ids_to_exclude)))
         )
+
+
+def append_tags_to_mappings(tag_ids, mapping_ids):
+    mappings = [get_mapping(mapping_id) for mapping_id in mapping_ids]
+    for mapping in mappings:
+        mapping['tag_ids'] = list(
+            set(mapping['tag_ids']) | set(map(str, tag_ids))
+        )
+    db.write_back(mappings)
