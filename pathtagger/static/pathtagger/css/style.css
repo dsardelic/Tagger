@@ -96,6 +96,14 @@ table.invisible td.input {
     float:right;
 }
 
+div.separate-left {
+    margin-left: 50px;
+}
+
+div.separate-right {
+    margin-right: 50px;
+}
+
 .content-title, .div-title {
     font-weight: bold;
     text-align: center;

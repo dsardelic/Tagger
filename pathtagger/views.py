@@ -56,34 +56,30 @@ def edit_mappings(request):
     if request.POST.get('action_delete'):
         return delete_mappings(request)
     if request.POST.get('action_edit_tags'):
-        return edit_mappings_tags(request)
-
-
-def edit_mappings_tags(request):
-    mapping_ids = list(map(int, request.POST.getlist('mapping_id', [])))
-    if mapping_ids:
-        tag_ids_to_append, tag_ids_to_remove = [], []
-        for key in request.POST:
-            if key.startswith('tag_'):
-                value = request.POST.get(key, '')
-                if value == 'append':
-                    tag_ids_to_append.append(int(key.strip('tag_')))
-                elif value == 'remove':
-                    tag_ids_to_remove.append(int(key.strip('tag_')))
-        new_tag_names_str = request.POST.get('new_tag_names', '')
-        if new_tag_names_str:
-            for name in new_tag_names_str.strip(',').split(','):
-                name = name.strip()
-                tag = db.get_tag_by_name(name)
-                if tag:
-                    tag_ids_to_append.append(tag.doc_id)
-                else:
-                    tag_ids_to_append.append(
-                        db.insert_tag(name, ini_parser.DEFAULT_TAG_COLOR)
-                    )
-        db.append_tags_to_mappings(tag_ids_to_append, mapping_ids)
-        db.remove_tags_from_mappings(tag_ids_to_remove, mapping_ids)
-    return redirect('pathtagger:mappings_list')
+        mapping_ids = list(map(int, request.POST.getlist('mapping_id', [])))
+        if mapping_ids:
+            tag_ids_to_append, tag_ids_to_remove = [], []
+            for key in request.POST:
+                if key.startswith('tag_'):
+                    value = request.POST.get(key, '')
+                    if value == 'append':
+                        tag_ids_to_append.append(int(key.strip('tag_')))
+                    elif value == 'remove':
+                        tag_ids_to_remove.append(int(key.strip('tag_')))
+            new_tag_names_str = request.POST.get('new_tag_names', '')
+            if new_tag_names_str:
+                for name in new_tag_names_str.strip(',').split(','):
+                    name = name.strip()
+                    tag = db.get_tag_by_name(name)
+                    if tag:
+                        tag_ids_to_append.append(tag.doc_id)
+                    else:
+                        tag_ids_to_append.append(
+                            db.insert_tag(name, ini_parser.DEFAULT_TAG_COLOR)
+                        )
+            db.append_tags_to_mappings(tag_ids_to_append, mapping_ids)
+            db.remove_tags_from_mappings(tag_ids_to_remove, mapping_ids)
+        return redirect('pathtagger:mappings_list')
 
 
 def delete_mappings(request):
@@ -124,11 +120,6 @@ def mappings_list(request):
             'tags': db.get_all_tags()
         }
     )
-
-
-def edit_mapping_tags(request):
-    # TODO: complete me
-    pass
 
 
 def tag_details(request, tag_id):

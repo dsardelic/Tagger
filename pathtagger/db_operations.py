@@ -101,10 +101,10 @@ def delete_mappings(mapping_ids):
 def update_mapping(mapping_id, path, tag_ids=None):
     if tag_ids:
         db.update(
-            {'path': path, 'tag_ids': tag_ids}, where('doc_id') == mapping_id
+            {'path': path, 'tag_ids': tag_ids}, doc_ids=[mapping_id]
         )
     else:
-        db.update({'path': path}, where('doc_id') == mapping_id)
+        db.update({'path': path}, doc_ids=[mapping_id])
 
 
 def get_filtered_mappings(

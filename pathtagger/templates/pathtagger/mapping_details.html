@@ -23,94 +23,33 @@
         <input form="EditMappingDetailsForm" type="submit" value="Save"/>
     </form>
 </div>
-<div class="left" style="margin-left:50px;">
+<div class="left separate-left">
     {% if mapping.tags %}
         <div class="div-title">Mapping tags</div>
-        <form id="RemoveMappingTagsForm" action="{% url 'pathtagger:edit_mapping_tags' %}" method="POST"></form>
         <table style="margin-bottom:20px;">
             <tr>
-                <th>
-                    <input type="checkbox" onclick="toggle_all_checkboxes(this, 'tag_id')"/>
-                </th>
                 <th>Tag</th>
-                <th>Actions</th>
             </tr>
             {% for mapping_tag in mapping.tags|dictsort:'name' %}
                 <tr>
                     <td>
-                        <input form="RemoveMappingTagsForm" type="checkbox" name="tag_id" value="{{ mapping_tag.doc_id }}"/>
-                    </td>
-                    <td>
                         <a class="tag" style="background-color:{{ mapping_tag.color }}" href="{% url 'pathtagger:tag_details' tag_id=mapping_tag.doc_id %}">{{ mapping_tag.name }}</a>
-                    </td>
-                    <td>
-                        <form id="RemoveMappingTag_{{ mapping_tag.doc_id }}_Form" action="{% url 'pathtagger:edit_mapping_tags' %}" method="POST">
-                            <input form="RemoveMappingTag_{{ mapping_tag.doc_id }}_Form" type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}"/>
-                            <input form="RemoveMappingTag_{{ mapping_tag.doc_id }}_Form" type="hidden" name="mapping_id" value="{{ mapping.doc_id }}"/>
-                            <input form="RemoveMappingTag_{{ mapping_tag.doc_id }}_Form" type="hidden" name="tag_id" value="{{ mapping_tag.doc_id }}"/>
-                            <input form="RemoveMappingTag_{{ mapping_tag.doc_id }}_Form" type="submit" value="Remove"/>
-                        </form>
                     </td>
                 </tr>
             {% endfor %}
         </table>
-        <input form="RemoveMappingTagsForm" type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}"/>
-        <input form="RemoveMappingTagsForm" type="submit" value="Remove selected"/>
     {% else %}
         This mapping currently has no tags.
     {% endif %}
 </div>
-<div class="right" style="margin-left:50px;">
+<div class="right">
     <div class="div-title">Delete mapping</div>
     <form id="MappingDeleteForm" action="{% url 'pathtagger:delete_mappings' %}" method="POST">
         <input form="MappingDeleteForm" type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}"/>
         <input form="MappingDeleteForm" type="hidden" name="mapping_id" value="{{ mapping.doc_id }}"/>
-        <input form="MappingDeleteForm" type="submit" value="Delete"/>
-    </form>
-</div>
-<div class="right">
-    <div class="div-title">Tag mapping</div>
-    <form id="MappingTagsEditForm" action="{% url 'pathtagger:edit_mapping_tags' %}" method="POST">
-        <table style="margin-bottom:10px;">
-            <tr>
-                <th rowspan="2">Tag</th>
-                <th>As-is</th>
-                <th>Append</th>
-                <th>Remove</th>
-            </tr>
-            <tr>
-                <td>
-                    <input type="radio" name="TagsActionType" onclick="enable_all_radio_action_type('MappingTagsEditForm', 'as_is');" checked/>
-                </td>
-                <td>
-                    <input type="radio" name="TagsActionType" onclick="enable_all_radio_action_type('MappingTagsEditForm', 'append');"/>
-                </td>
-                <td>
-                    <input type="radio" name="TagsActionType" onclick="enable_all_radio_action_type('MappingTagsEditForm', 'remove');"/>
-                </td>
-            </tr>
-            {% for tag in tags|dictsort:'name' %}
-                <tr>
-                    <td>
-                        <a class="tag" style="background-color:{{ tag.color }}" href="{% url 'pathtagger:tag_details' tag_id=tag.doc_id %}">{{ tag.name }}</a>
-                    </td>
-                    <td>
-                        <input form="MappingTagsEditForm" type="radio" name="tag_{{ tag.doc_id }}" value="as_is" checked/>
-                    </td>
-                    <td>
-                        <input form="MappingTagsEditForm" type="radio" name="tag_{{ tag.doc_id }}" value="append"/>
-                    </td>
-                    <td>
-                        <input form="MappingTagsEditForm" type="radio" name="tag_{{ tag.doc_id }}" value="remove"/>
-                    </td>
-                </tr>
-            {% endfor %}
-        </table>
-        <div style="margin-bottom:20px;">
-            <label>New tags (comma separated): </label>
-            <input form="MappingTagsEditForm" type="text" name="new_tags" size="10">
+        <div align="right">
+            <input form="MappingDeleteForm" type="submit" value="Delete"/>
         </div>
-        <input form="MappingTagsEditForm" type="submit" value="Tag"/>
     </form>
 </div>
 {% endblock %}

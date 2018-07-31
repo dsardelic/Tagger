@@ -27,12 +27,10 @@
         </table>
         <input form="TagEditForm" type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}"/>
         <input form="TagEditForm" type="hidden" name="tag_id" value="{{ tag.doc_id }}"/>
-        <div align="center">
-            <input form="TagEditForm" type="submit" value="Save"/>
-        </div>
+        <input form="TagEditForm" type="submit" value="Save"/>
     </form>
 </div>
-<div class="left" style="margin-left:50px;">
+<div class="left separate-left">
     {% if mappings %}
         <div class="div-title">Mappings</div>
         <form id="removeFromMappingsForm" action="{% url 'pathtagger:remove_tag_from_mappings' %}" method="POST"></form>
@@ -83,7 +81,9 @@
     <form id="TagDeleteForm" action="{% url 'pathtagger:delete_tags' %}" method="POST">
         <input form="TagDeleteForm" type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}"/>
         <input form="TagDeleteForm" type="hidden" name="tag_id" value="{{ tag.doc_id }}"/>
-        <input form="TagDeleteForm" type="submit" value="Delete"/>
+        <div align="right">
+            <input form="TagDeleteForm" type="submit" value="Delete"/>
+        </div>
     </form>
 </div>
 {% endblock %}

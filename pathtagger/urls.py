@@ -9,10 +9,8 @@ urlpatterns = [
     path('mappings/<int:mapping_id>', views.mapping_details, name='mapping_details'),
     path('mappings/add/', views.add_mapping, name='add_mapping'),
     path('mappings/edit/', views.edit_mappings, name='edit_mappings'),
-    # path('mappings/tags/edit/', views.edit_mappings_tags, name='edit_mappings_tags'),
     path('mappings/delete/', views.delete_mappings, name='delete_mappings'),
     path('mappings/', views.mappings_list, name='mappings_list'),
-    path('mapping/tags/edit/', views.edit_mapping_tags, name='edit_mapping_tags'),
 
     path('tags/<int:tag_id>/', views.tag_details, name='tag_details'),
     path('tags/add/', views.add_tag, name='add_tag'),
