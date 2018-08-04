@@ -1,6 +1,8 @@
 {% extends 'pathtagger/base.html' %}
 {% block head_title %} Tagger - Mappings list {% endblock %}
 {% block scripts %}
+    {% load static %}
+    <script src="{% static 'pathtagger/js/scripts.js' %}"></script>
     <script type="text/javascript">
         function clear_filters() {
             checkBox = document.getElementById('ToggleAllIncludeCheckboxes');
@@ -64,9 +66,9 @@
             </table>
             <input form="mappingsEditForm" type="submit" name="action_delete" value="Delete selected"/>
         {% elif no_mappings_at_all %}
-            There are currently no defined mappings.
+            There are no defined mappings.
         {% else %}
-            There are currently no mappings that match selected filters.
+            There are no mappings matching selected search criteria.
         {% endif %}
     </div>
     <div class="left separate-left">

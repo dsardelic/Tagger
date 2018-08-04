@@ -1,5 +1,9 @@
 {% extends 'pathtagger/base.html' %}
 {% block head_title %} Tagger - Tags list {% endblock %}
+{% block scripts %}
+    {% load static %}
+    <script src="{% static 'pathtagger/js/scripts.js' %}"></script>
+{% endblock %}
 {% block content_title %} TAGS LIST {% endblock %}
 {% block content %}
     <div class="left">
@@ -38,7 +42,7 @@
             <input form="deleteTagsForm" type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}"/>
             <input form="deleteTagsForm" type="submit" value="Delete selected"/>
         {% else %}
-            There are currently no defined tags.
+            There are no defined tags.
         {% endif %}
     </div>
     <div class="left separate-left">
