@@ -57,13 +57,8 @@ def mapping_details(request, mapping_id):
 
 def add_mapping(request):
     path = request.POST.get('path', '')
-    if path:
-        mapping = db.get_mapping_by_path(path)
-        if not mapping:
-            mapping_id = db.insert_mapping(path, [])
-        else:
-            mapping_id = mapping.doc_id
-        return redirect('pathtagger:mapping_details', mapping_id=mapping_id)
+    if path and not db.get_mapping_by_path(path):
+        db.insert_mapping(path, [])
     return redirect('pathtagger:mappings_list')
 
 
@@ -209,7 +204,7 @@ def path_details(request, path):
                 )
             ]
             for child in path_children:
-                mapping = db.get_mapping_by_path(child['path'])
+                mapping = db.get_mapping_by_path(child['system_path'])
                 if mapping and mapping.get('tag_ids', []):
                     child['tags'] = [
                         db.get_tag_by_id(int(mapping_tag_id))
@@ -221,13 +216,14 @@ def path_details(request, path):
         {
             'path': path,
             'system_path': str(ppath),
+            'ajax_system_path': str(ppath).replace('\\', '\\\\'),
             'path_exists': ppath.exists(),
-            'path_is_favorite': True if db.get_favorite_path(path) else False,
+            'path_is_favorite': True if db.get_favorite_path(str(ppath)) else False,
             'path_parent': ppath.parent.as_posix(),
             'path_tokens': path_tokens,
             'path_children': path_children,
             'tags': db.get_all_tags(),
-            'drive_root_dir': get_drive_root_dirs()
+            'drive_root_dirs': get_drive_root_dirs()
         }
     )
 

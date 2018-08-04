@@ -53,7 +53,7 @@
                                 {{ mapping.path }}
                             {% endif %}
                         </td>
-                        <td style="text-align:left;">
+                        <td>
                             {% for mapping_tag in mapping.tags|dictsort:'name' %}
                                 <a class="tag" style="background-color:{{ mapping_tag.color }}" href="{% url 'pathtagger:tag_details' tag_id=mapping_tag.doc_id %}">{{ mapping_tag.name }}</a>
                             {% endfor %}
