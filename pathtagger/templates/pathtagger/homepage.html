@@ -1,33 +1,33 @@
 {% extends 'pathtagger/base.html' %}
 {% block head_title %} Tagger - Homepage {% endblock %}
-{% block content_title %} Homepage {% endblock %}
+{% block content_title %} HOMEPAGE {% endblock %}
 {% block content %}
-<div class="left">Welcome to tagger!</div>
-<div class="right">
-    <div class="div-title">FAVORITE PATHS</div>
-    <table>
-        <tr>
-            <th>Path</th>
-            <th>Actions</th>
-        </tr>
-        {% for favorite_path in favorite_paths|dictsort:'path' %}
+    <div class="left">Welcome to tagger!</div>
+    <div class="right">
+        <div class="div-title">FAVORITE PATHS</div>
+        <table>
             <tr>
-                <td {% if not favorite_path.path_exists %} class="nonexistent-path" title="Nonexistent path" {% endif %} style="text-align:left;">
-                    {% if favorite_path.path_is_folder %}
-                        <a href="{% url 'pathtagger:path_details' path=favorite_path.path %}">{{ favorite_path.path }}</a>
-                    {% else %}
-                        {{ favorite_path.path }}
-                    {% endif %}
-                </td>
-                <td>
-                    <form action="{% url 'pathtagger:toggle_favorite_path' %}" method="POST">
-                        {% csrf_token %}
-                        <input type="hidden" name="path" value="{{ favorite_path.path }}"/>
-                        <input type="submit" value="Remove"/>
-                    </form>
-                </td>
+                <th>Path</th>
+                <th>Actions</th>
             </tr>
-        {% endfor %}
-    </table>
-</div>
+            {% for favorite_path in favorite_paths|dictsort:'path' %}
+                <tr>
+                    <td {% if not favorite_path.path_exists %} class="nonexistent-path" title="Nonexistent path" {% endif %} style="text-align:left;">
+                        {% if favorite_path.path_is_dir %}
+                            <a href="{% url 'pathtagger:path_details' path=favorite_path.path %}">{{ favorite_path.path }}</a>
+                        {% else %}
+                            {{ favorite_path.path }}
+                        {% endif %}
+                    </td>
+                    <td>
+                        <form action="{% url 'pathtagger:toggle_favorite_path' %}" method="POST">
+                            {% csrf_token %}
+                            <input type="hidden" name="path" value="{{ favorite_path.path }}"/>
+                            <input type="submit" value="Remove"/>
+                        </form>
+                    </td>
+                </tr>
+            {% endfor %}
+        </table>
+    </div>
 {% endblock %}

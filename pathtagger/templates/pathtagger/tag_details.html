@@ -1,89 +1,89 @@
 {% extends 'pathtagger/base.html' %}
 {% block head_title %} Tagger - Tag details: {{ tag.name }} {% endblock %}
-{% block content_title %} Tag details: <div style="text-transform:none;display:inline-block;">{{ tag.name }}</div> {% endblock %}
+{% block content_title %} TAG DETAILS: {{ tag.name }} {% endblock %}
 {% block content %}
-<div class="left">
-    <div class="div-title">Details</div>
-    <form id="TagEditForm" method="POST">
-        <table class="invisible" style="margin-bottom:20px;">
-            <tr>
-                <td class="label">Current name: </td>
-                <td class="input">
-                    <input type="text" value="{{ tag.name }}" disabled/>
-                </td>
-            </tr>
-            <tr>
-                <td class="label">New name: </td>
-                <td class="input">
-                    <input form="TagEditForm" type="text" name="name" value="{{ tag.name }}"/>
-                </td>
-            </tr>
-            <tr>
-                <td class="label">Color:</td>
-                <td class="input">
-                    <input form="TagEditForm" type="color" name="color" value="{{ tag.color }}"/>
-                </td>
-            </tr>
-        </table>
-        <input form="TagEditForm" type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}"/>
-        <input form="TagEditForm" type="hidden" name="tag_id" value="{{ tag.doc_id }}"/>
-        <input form="TagEditForm" type="submit" value="Save"/>
-    </form>
-</div>
-<div class="left separate-left">
-    {% if mappings %}
-        <div class="div-title">Mappings</div>
-        <form id="removeFromMappingsForm" action="{% url 'pathtagger:remove_tag_from_mappings' %}" method="POST"></form>
-        <table style="margin-bottom:20px;">
-            <tr>
-                <th><input type="checkbox" onclick="toggle_all_checkboxes(this, 'mapping_id');"></th>
-                <th>Path</th>
-                <th>Tags</th>
-                <th>Actions</th>
-            </tr>
-            {% for mapping in mappings|dictsort:'path' %}
+    <div class="left">
+        <div class="div-title">DETAILS</div>
+        <form id="TagEditForm" method="POST">
+            <table class="invisible" style="margin-bottom:20px;">
                 <tr>
-                    <td>
-                        <input form="removeFromMappingsForm" type="checkbox" name="mapping_id" value="{{ mapping.doc_id }}"/>
-                    </td>
-                    <td {% if not mapping.path_exists %} class="nonexistent-path" title="Nonexistent path" {% endif %} style="text-align:left;">
-                        {% if mapping.path_is_folder %}
-                            <a href="{% url 'pathtagger:path_details' path=mapping.path %}">{{ mapping.path }}</a>
-                        {% else %}
-                            {{ mapping.path }}
-                        {% endif %}
-                    </td>
-                    <td style="text-align:left;">
-                        {% for mapping_tag in mapping.tags|dictsort:'name' %}
-                            <a class="tag" style="background-color:{{ mapping_tag.color }}" href="{% url 'pathtagger:tag_details' tag_id=mapping_tag.doc_id %}">{{ mapping_tag.name }}</a>
-                        {% endfor %}
-                    </td>
-                    <td style='white-space: nowrap'>
-                        <form id="removeFromMapping_{{ mapping.doc_id }}_Form" action="{% url 'pathtagger:remove_tag_from_mappings' %}" method="POST" style="display:inline-block;">
-                            <input form="removeFromMapping_{{ mapping.doc_id }}_Form" type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}"/>
-                            <input form="removeFromMapping_{{ mapping.doc_id }}_Form" type="hidden" name="tag_id" value="{{ tag.doc_id }}"/>
-                            <input form="removeFromMapping_{{ mapping.doc_id }}_Form" type="hidden" name="mapping_id" value="{{ mapping.doc_id }}"/>
-                            <input form="removeFromMapping_{{ mapping.doc_id }}_Form" type="submit" value="Remove"/>
-                        </form>
+                    <td class="label">Current name: </td>
+                    <td class="input">
+                        <input type="text" value="{{ tag.name }}" disabled/>
                     </td>
                 </tr>
-            {% endfor %}
-        </table>
-        <input form="removeFromMappingsForm" type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}"/>
-        <input form="removeFromMappingsForm" type="hidden" name="tag_id" value="{{ tag.doc_id }}"/>
-        <input form="removeFromMappingsForm" type="submit" value="Remove selected"/>
-    {% else %}
-        There are currently no paths with this tag.
-    {% endif %}
-</div>
-<div class="right">
-    <div class="div-title">DELETE TAG</div>
-    <form id="TagDeleteForm" action="{% url 'pathtagger:delete_tags' %}" method="POST">
-        <input form="TagDeleteForm" type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}"/>
-        <input form="TagDeleteForm" type="hidden" name="tag_id" value="{{ tag.doc_id }}"/>
-        <div align="right">
-            <input form="TagDeleteForm" type="submit" value="Delete"/>
-        </div>
-    </form>
-</div>
+                <tr>
+                    <td class="label">New name: </td>
+                    <td class="input">
+                        <input form="TagEditForm" type="text" name="name" value="{{ tag.name }}"/>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="label">Color:</td>
+                    <td class="input">
+                        <input form="TagEditForm" type="color" name="color" value="{{ tag.color }}"/>
+                    </td>
+                </tr>
+            </table>
+            <input form="TagEditForm" type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}"/>
+            <input form="TagEditForm" type="hidden" name="tag_id" value="{{ tag.doc_id }}"/>
+            <input form="TagEditForm" type="submit" value="Save"/>
+        </form>
+    </div>
+    <div class="left separate-left">
+        {% if mappings %}
+            <div class="div-title">MAPPINGS</div>
+            <form id="removeFromMappingsForm" action="{% url 'pathtagger:remove_tag_from_mappings' %}" method="POST"></form>
+            <table style="margin-bottom:20px;">
+                <tr>
+                    <th><input type="checkbox" onclick="toggle_all_checkboxes(this, 'mapping_id');"></th>
+                    <th>Path</th>
+                    <th>Tags</th>
+                    <th>Actions</th>
+                </tr>
+                {% for mapping in mappings|dictsort:'path' %}
+                    <tr>
+                        <td>
+                            <input form="removeFromMappingsForm" type="checkbox" name="mapping_id" value="{{ mapping.doc_id }}"/>
+                        </td>
+                        <td {% if not mapping.path_exists %} class="nonexistent-path" title="Nonexistent path" {% endif %} style="text-align:left;">
+                            {% if mapping.path_is_dir %}
+                                <a href="{% url 'pathtagger:path_details' path=mapping.path %}">{{ mapping.path }}</a>
+                            {% else %}
+                                {{ mapping.path }}
+                            {% endif %}
+                        </td>
+                        <td style="text-align:left;">
+                            {% for mapping_tag in mapping.tags|dictsort:'name' %}
+                                <a class="tag" style="background-color:{{ mapping_tag.color }}" href="{% url 'pathtagger:tag_details' tag_id=mapping_tag.doc_id %}">{{ mapping_tag.name }}</a>
+                            {% endfor %}
+                        </td>
+                        <td style='white-space: nowrap'>
+                            <form id="removeFromMapping_{{ mapping.doc_id }}_Form" action="{% url 'pathtagger:remove_tag_from_mappings' %}" method="POST" style="display:inline-block;">
+                                <input form="removeFromMapping_{{ mapping.doc_id }}_Form" type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}"/>
+                                <input form="removeFromMapping_{{ mapping.doc_id }}_Form" type="hidden" name="tag_id" value="{{ tag.doc_id }}"/>
+                                <input form="removeFromMapping_{{ mapping.doc_id }}_Form" type="hidden" name="mapping_id" value="{{ mapping.doc_id }}"/>
+                                <input form="removeFromMapping_{{ mapping.doc_id }}_Form" type="submit" value="Remove"/>
+                            </form>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </table>
+            <input form="removeFromMappingsForm" type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}"/>
+            <input form="removeFromMappingsForm" type="hidden" name="tag_id" value="{{ tag.doc_id }}"/>
+            <input form="removeFromMappingsForm" type="submit" value="Remove selected"/>
+        {% else %}
+            There are currently no paths with this tag.
+        {% endif %}
+    </div>
+    <div class="right">
+        <div class="div-title">DELETE TAG</div>
+        <form id="TagDeleteForm" action="{% url 'pathtagger:delete_tags' %}" method="POST">
+            <input form="TagDeleteForm" type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}"/>
+            <input form="TagDeleteForm" type="hidden" name="tag_id" value="{{ tag.doc_id }}"/>
+            <div align="right">
+                <input form="TagDeleteForm" type="submit" value="Delete"/>
+            </div>
+        </form>
+    </div>
 {% endblock %}

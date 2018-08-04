@@ -1,0 +1,150 @@
+{% extends 'pathtagger/base.html' %}
+{% block head_title %} Tagger - Path details: {{ system_path }} {% endblock %}
+{% block scripts %}
+    {% load static %}
+    <script src="{% static 'pathtagger/js/scripts.js' %}"></script>
+    <script type="text/javascript">
+        function toggle_favorite(source) {
+            var xhttp = new XMLHttpRequest();
+            xhttp.onreadystatechange = function() {
+                if (this.readyState == 4 && this.status == 200) {
+                    response = JSON.parse(this.responseText);
+                    if (response.status = 'ok') {
+                        if (response.is_favorite == 'true') {
+                            source.setAttribute("src", "{% static 'pathtagger/img/star-24-yellow.ico' %}");
+                            source.setAttribute("title", "Remove from favorites");
+                        }
+                        else {
+                            source.setAttribute("src", "{% static 'pathtagger/img/star-24-gray.ico' %}");
+                            source.setAttribute("title", "Add to favorites");
+                        }
+                    }
+                }
+            };
+            xhttp.open("POST", "{% url 'pathtagger:toggle_favorite_path' %}", true);
+            xhttp.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+            xhttp.setRequestHeader("X-Requested-With", "XMLHttpRequest");
+            xhttp.send("path={{ system_path }}&csrfmiddlewaretoken={{ csrf_token }}");
+        }
+    </script>
+{% endblock %}
+{% block content_title %}
+    {% if path_exists %}
+        {% load static %}
+        {% if path_is_favorite %}
+            <img style="vertical-align:bottom;" onclick="toggle_favorite(this);" src="{% static 'pathtagger/img/star-24-yellow.ico' %}" title="Remove from favorites" />
+        {% else %}
+            <img style="vertical-align:bottom;" onclick="toggle_favorite(this);" src="{% static 'pathtagger/img/star-24-gray.ico' %}" title="Add to favorites" />
+        {% endif %}
+        PATH DETAILS:&nbsp;
+        {% for path_token in path_tokens %}
+            <a href="{% url 'pathtagger:path_details' path=path_token.path %}">{{ path_token.name }}</a>{% if not forloop.last %} > {% endif %}
+        {% endfor %}
+    {% else %}
+        PATH DETAILS: {{ system_path }}
+    {% endif %}
+{% endblock %}
+{% block content %}
+    {% if path_exists %}
+        <div class="left">
+            <div class="div-title">CHILD PATHS</div>
+            <div class="left" style="margin-bottom:20px;">
+                <div style="display:inline-block;">
+                    <a href="{% url 'pathtagger:path_details' path=path_parent %}">&#x21A9; View parent details</a>
+                </div>
+                {% if drive_root_dirs %}
+                    <div class="right" style="display:inline-block;">
+                        <select>
+                            <option value="#" selected>Select drive</option>
+                            {% for drive_root_dir in drive_root_dirs %}
+                                <option value="{% url 'pathtagger:path_details' path=drive_root_dir.path %}" onselect="function(this) {window.location.href = this.value;}">{{ drive_root_dir.system_path }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                {% endif %}
+            </div>
+            <form id="editPathTagsForm" action="{% url 'pathtagger:edit_path_tags' %}" method="POST"></form>
+            {% if path_children %}
+                <table>
+                    <tr>
+                        <th>
+                            <input type="checkbox" onclick="toggle_all_checkboxes(this, 'path');"/>
+                        </th>
+                        <th>Path</th>
+                        <th>Tags</th>
+                    </tr>
+                    {% for child in path_children %}
+                        <tr>
+                            <td>
+                                <input form="editPathTagsForm" type="checkbox" name="path" value="{{ child.path }}"/>
+                            </td>
+                            <td style="text-align:left;">
+                                {% if child.is_dir %}
+                                    <a href="{% url 'pathtagger:path_details' path=child.path %}">{{ child.name }}</a>
+                                {% else %}
+                                    {{ child.name }}
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% for tag in child.tags|dictsort:'name' %}
+                                    <a href="{% url 'pathtagger:tag_details' tag_id=tag.doc_id %}" class="tag" style="background-color:{{ tag.color }}">{{ tag.name }}</a>
+                                {% endfor %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </table>
+            {% else %}
+                This path has no child paths.
+            {% endif %}
+        </div>
+        {% if path_children %}
+            <div class="right" id="tagPathDiv">
+                <div class="div-title">TAG PATHS</div>
+                <table style="margin-bottom:10px;">
+                    <tr>
+                        <th rowspan="2">Tag</th>
+                        <th>As-is</th>
+                        <th>Append</th>
+                        <th>Remove</th>
+                    </tr>
+                    <tr>
+                        <td>
+                            <input type="radio" name="TagsActionType" onclick="set_all_tags_selection('tagPathDiv', 'as_is');"/>
+                        </td>
+                        <td>
+                            <input type="radio" name="TagsActionType" onclick="set_all_tags_selection('tagPathDiv', 'append');"/>
+                        </td>
+                        <td>
+                            <input type="radio" name="TagsActionType" onclick="set_all_tags_selection('tagPathDiv', 'remove');"/>
+                        </td>
+                    </tr>
+                    {% for tag in tags|dictsort:'name' %}
+                        <tr>
+                            <td>
+                                <a class="tag" style="background-color:{{ tag.color }}" href="{% url 'pathtagger:tag_details' tag_id=tag.doc_id %}">{{ tag.name }}</a>
+                            </td>
+                            <td>
+                                <input form="editPathTagsForm" type="radio" name="tag_{{ tag.doc_id }}" value="as_is" checked/>
+                            </td>
+                            <td>
+                                <input form="editPathTagsForm" type="radio" name="tag_{{ tag.doc_id }}" value="append"/>
+                            </td>
+                            <td>
+                                <input form="editPathTagsForm" type="radio" name="tag_{{ tag.doc_id }}" value="remove"/>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </table>
+                <div style="margin-bottom:20px;">
+                    <label>New tags (comma separated): </label>
+                    <input form="editPathTagsForm" type="text" name="new_tag_names" size="10">
+                </div>
+                <input form="editPathTagsForm" type="hidden" name="current_path" value="{{ path }}"/>
+                <input form="editPathTagsForm" type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}"/>
+                <input form="editPathTagsForm" type="submit" value="Tag"/>
+            </div>
+        {% endif %}
+    {% else %}
+        <div class="left">This path is not valid on this machine.</div>
+    {% endif %}
+{% endblock %}

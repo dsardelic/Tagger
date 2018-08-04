@@ -5,7 +5,7 @@ function toggle_all_checkboxes(source, checkbox_name) {
     }
 }
 
-function enable_all_radio_action_type(commonAncestorId, actionType) {
+function set_all_tags_selection(commonAncestorId, actionType) {
     var ancestor = document.getElementById(commonAncestorId);
     var inputs = ancestor.getElementsByTagName('input');
     for (var i = 0; i < inputs.length; i++) {

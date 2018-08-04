@@ -1,9 +1,10 @@
+import os
 from pathlib import Path
 
 from django.http import JsonResponse
 from django.shortcuts import render, redirect
 
-from Tagger import ini_parser
+from Tagger import ini_parser, settings
 
 from . import db_operations as db
 
@@ -12,13 +13,27 @@ def get_extended_dataset(dataset):
     for element in dataset:
         path = Path(element['path'])
         element['path_exists'] = path.exists()
-        element['path_is_folder'] = path.is_dir()
+        element['path_is_dir'] = path.is_dir()
         if element.get('tag_ids', []):
             element['tags'] = [
                 db.get_tag_by_id(int(mapping_tag_id))
                 for mapping_tag_id in element['tag_ids']
             ]
     return dataset
+
+
+def get_drive_root_dirs():
+    if os.name == 'nt':
+        from ctypes import windll
+        bitfield = windll.kernel32.GetLogicalDrives()
+        masks = [
+            (1 << n, chr(ord('A') + n)) for n in range(ord('Z') - ord('A') + 1)
+        ]
+        return [
+            {'path': drive + ':/', 'system_path': drive + ':\\'}
+            for mask, drive in masks if bitfield & mask
+        ]
+    return []
 
 
 def mapping_details(request, mapping_id):
@@ -104,7 +119,9 @@ def mappings_list(request):
     if path_type == 'existent':
         mappings = [mapping for mapping in mappings if mapping['path_exists']]
     elif path_type == 'nonexistent':
-        mappings = [mapping for mapping in mappings if not mapping['path_exists']]
+        mappings = [
+            mapping for mapping in mappings if not mapping['path_exists']
+        ]
     filters = {}
     filters['tag_ids_to_include'] = tag_ids_to_include
     filters['tag_ids_to_exclude'] = tag_ids_to_exclude
@@ -170,13 +187,84 @@ def remove_tag_from_mappings(request):
 
 
 def path_details(request, path):
-    # TODO: complete me
-    pass
+    path_tokens, path_children = [], []
+    ppath = Path(path)
+    if ppath.exists():
+        path_parts, path_parents = ppath.parts, list(reversed(ppath.parents))
+        if ppath.is_dir():
+            path_parents.append(ppath)
+        for part, parent in zip(path_parts, path_parents):
+            path_tokens.append({'name': part, 'path': parent.as_posix()})
+        if ppath.is_dir():
+            path_children = [
+                {
+                    'path': p.as_posix(),
+                    'system_path': str(p),
+                    'name': p.name,
+                    'is_dir': p.is_dir()
+                }
+                for p in sorted(
+                    list(ppath.glob('*')),
+                    key=lambda x: (1 - x.is_dir(), str(x).upper())
+                )
+            ]
+            for child in path_children:
+                mapping = db.get_mapping_by_path(child['path'])
+                if mapping and mapping.get('tag_ids', []):
+                    child['tags'] = [
+                        db.get_tag_by_id(int(mapping_tag_id))
+                        for mapping_tag_id in mapping['tag_ids']
+                    ]
+    return render(
+        request,
+        'pathtagger/path_details.html',
+        {
+            'path': path,
+            'system_path': str(ppath),
+            'path_exists': ppath.exists(),
+            'path_is_favorite': True if db.get_favorite_path(path) else False,
+            'path_parent': ppath.parent.as_posix(),
+            'path_tokens': path_tokens,
+            'path_children': path_children,
+            'tags': db.get_all_tags(),
+            'drive_root_dir': get_drive_root_dirs()
+        }
+    )
 
 
 def edit_path_tags(request):
-    # TODO: complete me
-    pass
+    current_path = request.POST.get('current_path', '')
+    paths = request.POST.getlist('path', [])
+    if paths:
+        mapping_ids = []
+        for path in paths:
+            mapping = db.get_mapping_by_path(path)
+            if mapping:
+                mapping_ids.append(mapping.doc_id)
+            else:
+                mapping_ids.append(db.insert_mapping(path, []))
+        tag_ids_to_append, tag_ids_to_remove = [], []
+        for key in request.POST:
+            if key.startswith('tag_'):
+                value = request.POST.get(key, '')
+                if value == 'append':
+                    tag_ids_to_append.append(int(key.strip('tag_')))
+                elif value == 'remove':
+                    tag_ids_to_remove.append(int(key.strip('tag_')))
+        new_tag_names_str = request.POST.get('new_tag_names', '')
+        if new_tag_names_str:
+            for name in new_tag_names_str.strip(',').split(','):
+                name = name.strip()
+                tag = db.get_tag_by_name(name)
+                if tag:
+                    tag_ids_to_append.append(tag.doc_id)
+                else:
+                    tag_ids_to_append.append(
+                        db.insert_tag(name, ini_parser.DEFAULT_TAG_COLOR)
+                    )
+        db.append_tags_to_mappings(tag_ids_to_append, mapping_ids)
+        db.remove_tags_from_mappings(tag_ids_to_remove, mapping_ids)
+    return redirect('pathtagger:path_details', path=current_path)
 
 
 def toggle_favorite_path(request):
@@ -184,20 +272,29 @@ def toggle_favorite_path(request):
     if path:
         favorite_path = db.get_favorite_path(path)
         if favorite_path:
-            ids = db.delete_favorite_path(path)
+            db.delete_favorite_path(path)
+            is_favorite = False
         else:
-            ids = [db.insert_favorite_path(path)]
+            db.insert_favorite_path(path)
+            is_favorite = True
         if request.is_ajax():
-            return JsonResponse({'status': 'ok', 'ids': ids})
+            return JsonResponse(
+                {
+                    "status": "ok",
+                    "is_favorite": "true" if is_favorite else "false"
+                }
+            )
         else:
             return redirect('pathtagger:homepage')
     else:
-        return JsonResponse({'status': 'nok', 'ids': ids})
+        return JsonResponse({'status': 'nok'})
 
 
 def root_path_redirect(request):
-    # TODO: complete me
-    pass
+    return redirect(
+        'pathtagger:path_details',
+        path=Path(Path(settings.BASE_DIR).anchor).as_posix()
+    )
 
 
 def homepage(request):
