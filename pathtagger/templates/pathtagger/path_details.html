@@ -50,7 +50,11 @@
             <div class="div-title">CHILD PATHS</div>
             <div style="margin-bottom:20px;display:flow-root;">
                 <div class="left" style="margin-right:20px;">
-                    <a href="{% url 'pathtagger:path_details' path=path_parent %}">&#x21A9; View parent details</a>
+                    {% if not is_root_path %}
+                        <a href="{% url 'pathtagger:path_details' path=path_parent %}">&#x21A9; View parent details</a>
+                    {% else %}
+                        &nbsp;
+                    {% endif %}
                 </div>
                 {% if drive_root_dirs %}
                     <div class="right">
@@ -86,7 +90,7 @@
                                 {% endif %}
                             </td>
                             <td>
-                                {% for tag in child.tags|dictsort:'name' %}
+                                {% for tag in child.tags|dictsort:'name.lower' %}
                                     <a href="{% url 'pathtagger:tag_details' tag_id=tag.doc_id %}" class="tag" style="background-color:{{ tag.color }}">{{ tag.name }}</a>
                                 {% endfor %}
                             </td>
@@ -100,41 +104,43 @@
         {% if path_children %}
             <div class="right" id="tagPathDiv">
                 <div class="div-title">TAG PATHS</div>
-                <table style="margin-bottom:10px;">
-                    <tr>
-                        <th rowspan="2">Tag</th>
-                        <th>As-is</th>
-                        <th>Append</th>
-                        <th>Remove</th>
-                    </tr>
-                    <tr>
-                        <td>
-                            <input type="radio" name="TagsActionType" onclick="set_all_tags_selection('tagPathDiv', 'as_is');"/>
-                        </td>
-                        <td>
-                            <input type="radio" name="TagsActionType" onclick="set_all_tags_selection('tagPathDiv', 'append');"/>
-                        </td>
-                        <td>
-                            <input type="radio" name="TagsActionType" onclick="set_all_tags_selection('tagPathDiv', 'remove');"/>
-                        </td>
-                    </tr>
-                    {% for tag in tags|dictsort:'name' %}
+                {% if tags %}
+                    <table style="margin-bottom:10px;">
+                        <tr>
+                            <th rowspan="2">Tag</th>
+                            <th>As-is</th>
+                            <th>Append</th>
+                            <th>Remove</th>
+                        </tr>
                         <tr>
                             <td>
-                                <a class="tag" style="background-color:{{ tag.color }}" href="{% url 'pathtagger:tag_details' tag_id=tag.doc_id %}">{{ tag.name }}</a>
+                                <input type="radio" name="TagsActionType" onclick="set_all_tags_selection('tagPathDiv', 'as_is');"/>
                             </td>
                             <td>
-                                <input form="editPathTagsForm" type="radio" name="tag_{{ tag.doc_id }}" value="as_is" checked/>
+                                <input type="radio" name="TagsActionType" onclick="set_all_tags_selection('tagPathDiv', 'append');"/>
                             </td>
                             <td>
-                                <input form="editPathTagsForm" type="radio" name="tag_{{ tag.doc_id }}" value="append"/>
-                            </td>
-                            <td>
-                                <input form="editPathTagsForm" type="radio" name="tag_{{ tag.doc_id }}" value="remove"/>
+                                <input type="radio" name="TagsActionType" onclick="set_all_tags_selection('tagPathDiv', 'remove');"/>
                             </td>
                         </tr>
-                    {% endfor %}
-                </table>
+                        {% for tag in tags|dictsort:'name.lower' %}
+                            <tr>
+                                <td>
+                                    <a class="tag" style="background-color:{{ tag.color }}" href="{% url 'pathtagger:tag_details' tag_id=tag.doc_id %}">{{ tag.name }}</a>
+                                </td>
+                                <td>
+                                    <input form="editPathTagsForm" type="radio" name="tag_{{ tag.doc_id }}" value="as_is" checked/>
+                                </td>
+                                <td>
+                                    <input form="editPathTagsForm" type="radio" name="tag_{{ tag.doc_id }}" value="append"/>
+                                </td>
+                                <td>
+                                    <input form="editPathTagsForm" type="radio" name="tag_{{ tag.doc_id }}" value="remove"/>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </table>
+                {% endif %}
                 <div style="margin-bottom:20px;">
                     <label>New tags (comma separated): </label>
                     <input form="editPathTagsForm" type="text" name="new_tag_names" size="10">

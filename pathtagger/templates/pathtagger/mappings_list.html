@@ -6,11 +6,15 @@
     <script type="text/javascript">
         function clear_filters() {
             checkBox = document.getElementById('ToggleAllIncludeCheckboxes');
-            checkBox.checked = false;
-            toggle_all_checkboxes(checkBox, 'tag_id_include');
+            if (checkBox) {
+                checkBox.checked = false;
+                toggle_all_checkboxes(checkBox, 'tag_id_include');
+            }
             checkBox = document.getElementById('ToggleAllExcludeCheckboxes');
-            checkBox.checked = false;
-            toggle_all_checkboxes(checkBox, 'tag_id_exclude');
+            if (checkBox) {
+                checkBox.checked = false;
+                toggle_all_checkboxes(checkBox, 'tag_id_exclude');
+            }
             document.getElementById('PathNameLikeTextbox').value = '';
             document.getElementById('PathTypeAllRadio').checked = true;
         }
@@ -36,7 +40,7 @@
                     <th>Tags</th>
                     <th>Actions</th>
                 </tr>
-                {% for mapping in mappings|dictsort:'path' %}
+                {% for mapping in mappings|dictsort:'path.lower' %}
                     <tr>
                         <td>
                             <input form="mappingsEditForm" type="checkbox" name="mapping_id" value="{{ mapping.doc_id }}"/>
@@ -49,7 +53,7 @@
                             {% endif %}
                         </td>
                         <td>
-                            {% for mapping_tag in mapping.tags|dictsort:'name' %}
+                            {% for mapping_tag in mapping.tags|dictsort:'name.lower' %}
                                     <a class="tag" style="background-color:{{ mapping_tag.color }}" href="{% url 'pathtagger:tag_details' tag_id=mapping_tag.doc_id %}">{{ mapping_tag.name }}</a>
                             {% endfor %}
                         </td>
@@ -86,116 +90,122 @@
             <input form="createMappingForm" type="submit" value="Create"/>
         </form>
     </div>
-    <div class="right">
-        <div class="div-title">SEARCH FILTERS</div>
-        <form id="mappingFiltersForm" method="GET">
-            <table style="margin-bottom:10px;">
-                <tr>
-                    <th rowspan="2">Tag</th>
-                    <th>Include</th>
-                    <th>Exclude</th>
-                </tr>
-                <tr>
-                    <td>
-                        <input type="checkbox" onclick="toggle_all_checkboxes(this, 'tag_id_include');" id="ToggleAllIncludeCheckboxes"/>
-                    </td>
-                    <td>
-                        <input type="checkbox" onclick="toggle_all_checkboxes(this, 'tag_id_exclude');" id="ToggleAllExcludeCheckboxes"/>
-                    </td>
-                </tr>
-                {% for tag in tags|dictsort:'name' %}
+    {% if not no_mappings_at_all %}
+        <div class="right">
+            <div class="div-title">SEARCH FILTERS</div>
+            <form id="mappingFiltersForm" method="GET">
+                {% if tags %}
+                    <table style="margin-bottom:10px;">
+                        <tr>
+                            <th rowspan="2">Tag</th>
+                            <th>Include</th>
+                            <th>Exclude</th>
+                        </tr>
+                        <tr>
+                            <td>
+                                <input type="checkbox" onclick="toggle_all_checkboxes(this, 'tag_id_include');" id="ToggleAllIncludeCheckboxes"/>
+                            </td>
+                            <td>
+                                <input type="checkbox" onclick="toggle_all_checkboxes(this, 'tag_id_exclude');" id="ToggleAllExcludeCheckboxes"/>
+                            </td>
+                        </tr>
+                        {% for tag in tags|dictsort:'name.lower' %}
+                            <tr>
+                                <td>
+                                    <a class="tag" style="background-color:{{ tag.color }}" href="{% url 'pathtagger:tag_details' tag_id=tag.doc_id %}">{{ tag.name }}</a>
+                                </td>
+                                <td>
+                                    <input form="mappingFiltersForm" type="checkbox" name="tag_id_include" value="{{ tag.doc_id }}" {% if tag.doc_id in filters.tag_ids_to_include %} checked {% endif %}/>
+                                </td>
+                                <td>
+                                    <input form="mappingFiltersForm" type="checkbox" name="tag_id_exclude" value="{{ tag.doc_id }}" {% if tag.doc_id in filters.tag_ids_to_exclude %} checked {% endif %}/>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </table>
+                {% endif %}
+                <div style="margin-bottom:10px;">
+                    <label>Path name contains: </label>
+                    <input form="mappingFiltersForm" type="text" name="path_name_like" value="{{ filters.path_name_like }}" size="10" id="PathNameLikeTextbox"/>
+                </div>
+                <table class="invisible" style="margin-bottom:20px;">
                     <tr>
-                        <td>
-                            <a class="tag" style="background-color:{{ tag.color }}" href="{% url 'pathtagger:tag_details' tag_id=tag.doc_id %}">{{ tag.name }}</a>
-                        </td>
-                        <td>
-                            <input form="mappingFiltersForm" type="checkbox" name="tag_id_include" value="{{ tag.doc_id }}" {% if tag.doc_id in filters.tag_ids_to_include %} checked {% endif %}/>
-                        </td>
-                        <td>
-                            <input form="mappingFiltersForm" type="checkbox" name="tag_id_exclude" value="{{ tag.doc_id }}" {% if tag.doc_id in filters.tag_ids_to_exclude %} checked {% endif %}/>
+                        <td rowspan="3" style="text-align:left;vertical-align:top;">Path type:</td>
+                        <td style="text-align:left;">
+                            <input form="mappingFiltersForm" type="radio" name="path_type" value="all" id="PathTypeAllRadio" {% if filters.path_type == 'all' %} checked {% endif %}/>
+                            <label for="PathTypeAllRadio">All</label>
                         </td>
                     </tr>
-                {% endfor %}
-            </table>
-            <div style="margin-bottom:10px;">
-                <label>Path name contains: </label>
-                <input form="mappingFiltersForm" type="text" name="path_name_like" value="{{ filters.path_name_like }}" size="10" id="PathNameLikeTextbox"/>
-            </div>
-            <table class="invisible" style="margin-bottom:20px;">
-                <tr>
-                    <td rowspan="3" style="text-align:left;vertical-align:top;">Path type:</td>
-                    <td style="text-align:left;">
-                        <input form="mappingFiltersForm" type="radio" name="path_type" value="all" id="PathTypeAllRadio" {% if filters.path_type == 'all' %} checked {% endif %}/>
-                        <label for="PathTypeAllRadio">All</label>
-                    </td>
-                </tr>
-                <tr>
-                    <td style="text-align:left;">
-                        <input form="mappingFiltersForm" type="radio" name="path_type" value="existent" {% if filters.path_type == 'existent' %} checked {% endif %}/>
-                        <label for="PathTypeExistentRadio">Existent</label>
-                    </td>
-                </tr>
-                <tr>
-                    <td style="text-align:left;">
-                        <input form="mappingFiltersForm" type="radio" name="path_type" value="nonexistent" {% if filters.path_type == 'nonexistent' %} checked {% endif %}/>
-                        <label for="PathTypeNonexistentRadio">Nonexistent</label>
-                    </td>
-                </tr>
-            </table>
-            <div style="margin-bottom:60px;display:flow-root;">
-                <div class="left">
-                    <input form="mappingFiltersForm" type="submit" value="Search"/>
-                </div>
-                <div class="right">
-                    <button type="button" onclick="clear_filters();">Clear filters</button>
-                </div>
-            </div>
-        </form>
-        <div align="center">
-            <button type="button" onclick="show_tag_mappings_block(this);">Show tagging form</button>
-        </div>
-        <div id="tagMappingsBlock" style="display:none;">
-            <div class="div-title">TAG MAPPINGS</div>
-            <table style="margin-bottom:10px;">
-                <tr>
-                    <th rowspan="2">Tag</th>
-                    <th>As-is</th>
-                    <th>Append</th>
-                    <th>Remove</th>
-                </tr>
-                <tr>
-                    <td>
-                        <input type="radio" name="TagsActionType" onclick="set_all_tags_selection('tagMappingsBlock', 'as_is');"/>
-                    </td>
-                    <td>
-                        <input type="radio" name="TagsActionType" onclick="set_all_tags_selection('tagMappingsBlock', 'append');"/>
-                    </td>
-                    <td>
-                        <input type="radio" name="TagsActionType" onclick="set_all_tags_selection('tagMappingsBlock', 'remove');"/>
-                    </td>
-                </tr>
-                {% for tag in tags|dictsort:'name' %}
                     <tr>
-                        <td>
-                            <a class="tag" style="background-color:{{ tag.color }}" href="{% url 'pathtagger:tag_details' tag_id=tag.doc_id %}">{{ tag.name }}</a>
-                        </td>
-                        <td>
-                            <input form="mappingsEditForm" type="radio" name="tag_{{ tag.doc_id }}" value="as_is" checked/>
-                        </td>
-                        <td>
-                            <input form="mappingsEditForm" type="radio" name="tag_{{ tag.doc_id }}" value="append"/>
-                        </td>
-                        <td>
-                            <input form="mappingsEditForm" type="radio" name="tag_{{ tag.doc_id }}" value="remove"/>
+                        <td style="text-align:left;">
+                            <input form="mappingFiltersForm" type="radio" name="path_type" value="existent" {% if filters.path_type == 'existent' %} checked {% endif %}/>
+                            <label for="PathTypeExistentRadio">Existent</label>
                         </td>
                     </tr>
-                {% endfor %}
-            </table>
-            <div style="margin-bottom:20px;">
-                <label>New tags (comma separated): </label>
-                <input form="mappingsEditForm" type="text" name="new_tag_names" size="10">
+                    <tr>
+                        <td style="text-align:left;">
+                            <input form="mappingFiltersForm" type="radio" name="path_type" value="nonexistent" {% if filters.path_type == 'nonexistent' %} checked {% endif %}/>
+                            <label for="PathTypeNonexistentRadio">Nonexistent</label>
+                        </td>
+                    </tr>
+                </table>
+                <div style="margin-bottom:60px;display:flow-root;">
+                    <div class="left">
+                        <input form="mappingFiltersForm" type="submit" value="Search"/>
+                    </div>
+                    <div class="right">
+                        <button type="button" onclick="clear_filters();">Clear filters</button>
+                    </div>
+                </div>
+            </form>
+            <div align="center">
+                <button type="button" onclick="show_tag_mappings_block(this);">Show tagging form</button>
             </div>
-            <input form="mappingsEditForm" type="submit" name="action_edit_tags" value="Tag"/>
+            <div id="tagMappingsBlock" style="display:none;">
+                <div class="div-title">TAG MAPPINGS</div>
+                {% if tags %}
+                    <table style="margin-bottom:10px;">
+                        <tr>
+                            <th rowspan="2">Tag</th>
+                            <th>As-is</th>
+                            <th>Append</th>
+                            <th>Remove</th>
+                        </tr>
+                        <tr>
+                            <td>
+                                <input type="radio" name="TagsActionType" onclick="set_all_tags_selection('tagMappingsBlock', 'as_is');"/>
+                            </td>
+                            <td>
+                                <input type="radio" name="TagsActionType" onclick="set_all_tags_selection('tagMappingsBlock', 'append');"/>
+                            </td>
+                            <td>
+                                <input type="radio" name="TagsActionType" onclick="set_all_tags_selection('tagMappingsBlock', 'remove');"/>
+                            </td>
+                        </tr>
+                        {% for tag in tags|dictsort:'name.lower' %}
+                            <tr>
+                                <td>
+                                    <a class="tag" style="background-color:{{ tag.color }}" href="{% url 'pathtagger:tag_details' tag_id=tag.doc_id %}">{{ tag.name }}</a>
+                                </td>
+                                <td>
+                                    <input form="mappingsEditForm" type="radio" name="tag_{{ tag.doc_id }}" value="as_is" checked/>
+                                </td>
+                                <td>
+                                    <input form="mappingsEditForm" type="radio" name="tag_{{ tag.doc_id }}" value="append"/>
+                                </td>
+                                <td>
+                                    <input form="mappingsEditForm" type="radio" name="tag_{{ tag.doc_id }}" value="remove"/>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </table>
+                {% endif %}
+                <div style="margin-bottom:20px;">
+                    <label>New tags (comma separated): </label>
+                    <input form="mappingsEditForm" type="text" name="new_tag_names" size="10">
+                </div>
+                <input form="mappingsEditForm" type="submit" name="action_edit_tags" value="Tag"/>
+            </div>
         </div>
-    </div>
+    {% endif %}
 {% endblock %}

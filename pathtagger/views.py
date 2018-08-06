@@ -52,7 +52,7 @@ def mapping_details(request, mapping_id):
         path = request.POST.get('path', '')
         if path:
             db.update_mapping(mapping_id, path)
-        return redirect('pathtagger:mapping_details', mapping_id=mapping_id)
+        return redirect('pathtagger:mappings_list')
 
 
 def add_mapping(request):
@@ -217,8 +217,11 @@ def path_details(request, path):
             'path': path,
             'system_path': str(ppath),
             'ajax_system_path': str(ppath).replace('\\', '\\\\'),
+            'is_root_path': ppath.anchor == str(ppath),
             'path_exists': ppath.exists(),
-            'path_is_favorite': True if db.get_favorite_path(str(ppath)) else False,
+            'path_is_favorite': (
+                True if db.get_favorite_path(str(ppath)) else False
+            ),
             'path_parent': ppath.parent.as_posix(),
             'path_tokens': path_tokens,
             'path_children': path_children,

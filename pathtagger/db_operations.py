@@ -116,7 +116,11 @@ def get_filtered_mappings(
         return db.search(
             (Query().tag_ids.all(tag_ids_to_include)) &
             (~(Query().tag_ids.any(tag_ids_to_exclude))) &
-            (Query().path.test(lambda x: x.find(path_name_like) > -1))
+            (
+                Query().path.test(
+                    lambda x: x.lower().find(path_name_like.lower()) > -1
+                )
+            )
         )
     else:
         return db.search(

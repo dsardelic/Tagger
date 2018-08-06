@@ -17,7 +17,7 @@
                     <th>Occurrences</th>
                     <th>Actions</th>
                 </tr>
-                {% for tag in tags|dictsort:'name' %}
+                {% for tag in tags|dictsort:'name.lower' %}
                     <tr>
                         <td>
                             <input form="deleteTagsForm" type="checkbox" name="tag_id" value="{{ tag.doc_id }}"/>
@@ -28,7 +28,7 @@
                         <td>
                             {{ tag.occurrences }}
                         </td>
-                        <td style='white-space: nowrap'>
+                        <td style="white-space: nowrap">
                             <a class="button" href="{% url 'pathtagger:tag_details' tag_id=tag.doc_id %}">Edit</a>
                             <form id="deleteTag_{{ tag.doc_id }}_Form" action="{% url 'pathtagger:delete_tags' %}" method="POST" style="display:inline-block;">
                                 <input form="deleteTag_{{ tag.doc_id }}_Form" type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}"/>

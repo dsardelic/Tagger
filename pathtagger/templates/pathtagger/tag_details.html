@@ -45,7 +45,7 @@
                     <th>Tags</th>
                     <th>Actions</th>
                 </tr>
-                {% for mapping in mappings|dictsort:'path' %}
+                {% for mapping in mappings|dictsort:'path.lower' %}
                     <tr>
                         <td>
                             <input form="removeFromMappingsForm" type="checkbox" name="mapping_id" value="{{ mapping.doc_id }}"/>
@@ -58,7 +58,7 @@
                             {% endif %}
                         </td>
                         <td>
-                            {% for mapping_tag in mapping.tags|dictsort:'name' %}
+                            {% for mapping_tag in mapping.tags|dictsort:'name.lower' %}
                                 <a class="tag" style="background-color:{{ mapping_tag.color }}" href="{% url 'pathtagger:tag_details' tag_id=mapping_tag.doc_id %}">{{ mapping_tag.name }}</a>
                             {% endfor %}
                         </td>

@@ -30,7 +30,7 @@
                 <tr>
                     <th>Tag</th>
                 </tr>
-                {% for mapping_tag in mapping.tags|dictsort:'name' %}
+                {% for mapping_tag in mapping.tags|dictsort:'name.lower' %}
                     <tr>
                         <td>
                             <a class="tag" style="background-color:{{ mapping_tag.color }}" href="{% url 'pathtagger:tag_details' tag_id=mapping_tag.doc_id %}">{{ mapping_tag.name }}</a>
