@@ -8,6 +8,6 @@ python_version = "3.5"
 
 [packages]
 tinydb = "==3.11.1"
-django = "==2.0.6"
+django = "==2.0.12"
 
 [dev-packages]
