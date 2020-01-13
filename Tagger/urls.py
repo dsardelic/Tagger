@@ -17,7 +17,7 @@ from django.contrib import admin
 from django.urls import path, include
 
 
-urlpatterns = [
-    path('pathtagger/', include('pathtagger.urls')),
-    path('admin/', admin.site.urls),
+urlpatterns = [  # pylint: disable=C0103
+    path("pathtagger/", include("pathtagger.urls")),
+    path("admin/", admin.site.urls),
 ]

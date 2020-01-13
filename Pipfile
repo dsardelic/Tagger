@@ -4,10 +4,17 @@ verify_ssl = true
 name = "pypi"
 
 [requires]
-python_version = "3.5"
+python_version = "3.8"
 
 [packages]
-tinydb = "==3.11.1"
-django = "==2.0.6"
+tinydb = "*"
+django = "*"
 
 [dev-packages]
+black = "*"
+pycodestyle = "*"
+pylint = "*"
+mypy = "*"
+
+[pipenv]
+allow_prereleases = true

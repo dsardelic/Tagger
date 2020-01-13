@@ -100,12 +100,8 @@ ENV/
 # mypy
 .mypy_cache/
 
-#Eclipse stuff
+# Eclipse stuff
 .project
 
-#PyDev stuff
+# PyDev stuff
 .pydevproject
-
-#Random stuff
-sample*.json
-

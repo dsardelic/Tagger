@@ -1,0 +1,9 @@
+[MASTER]
+disable=C0114,C0115,C0116,C0330
+load-plugins=pylint.extensions.broad_try_clause,pylint.extensions.emptystring,pylint.extensions.comparetozero,pylint.extensions.bad_builtin,pylint.extensions.mccabe,pylint.extensions.check_elif,pylint.extensions.redefined_variable_type,pylint.extensions.overlapping_exceptions,pylint.extensions.docparams
+
+[FORMAT]
+max-line-length=88
+
+[DESIGN]
+max-complexity=11
