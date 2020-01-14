@@ -5,7 +5,14 @@ from tinydb import TinyDB, Query, where
 from Tagger import params
 
 
-DB = TinyDB(params.DB_PATH, sort_keys=True, indent=4, separators=(",", ": "))
+DB = TinyDB(
+    params.DB_PATH,
+    sort_keys=True,
+    indent=4,
+    separators=(",", ": "),
+    encoding="utf-8",
+    ensure_ascii=False,
+)
 
 
 def get_all_favorite_paths():
