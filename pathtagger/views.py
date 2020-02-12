@@ -3,7 +3,7 @@ from pathlib import Path
 from urllib.parse import quote
 
 from django.http import JsonResponse
-from django.shortcuts import render, redirect
+from django.shortcuts import redirect, render
 
 from Tagger import params, settings
 

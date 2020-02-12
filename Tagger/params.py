@@ -5,7 +5,6 @@ from typing import Optional
 
 from . import settings
 
-
 CONFIG = configparser.ConfigParser()
 CONFIG.read(os.path.join(settings.BASE_DIR, "Tagger.ini"))
 

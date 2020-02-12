@@ -1,9 +1,8 @@
 from typing import List, Optional
 
-from tinydb import TinyDB, Query, where
+from tinydb import Query, TinyDB, where
 
 from Tagger import params
-
 
 DB = TinyDB(
     params.DB_PATH,
