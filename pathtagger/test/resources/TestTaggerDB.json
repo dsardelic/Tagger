@@ -1,0 +1,53 @@
+{
+    "_default": {
+        "1": {
+            "path": "/home/dino/Musik",
+            "tag_ids": [
+                "1"
+            ]
+        },
+        "2": {
+            "path": "/home/dino/Videos",
+            "tag_ids": [
+                "2"
+            ]
+        },
+        "3": {
+            "path": "/home/dino/Dokumente",
+            "tag_ids": [
+                "3"
+            ]
+        },
+        "4": {
+            "path": "/home/dino/Downloads",
+            "tag_ids": [
+                "1", "2", "3"
+            ]
+        },
+        "5": {
+            "path": "/home/dino/Downloads/unfinished",
+            "tag_ids": [
+                "1", "2"
+            ]
+        }
+    },
+    "favorite_paths": {
+        "1": {
+            "path": "/home/dino/Musik"
+        }
+    },
+    "tags": {
+        "1": {
+            "color": "#a40000",
+            "name": "Music"
+        },
+        "2": {
+            "color": "#307895",
+            "name": "Videos"
+        },
+        "3": {
+            "color": "#bca455",
+            "name": "Documents"
+        }
+    }
+}

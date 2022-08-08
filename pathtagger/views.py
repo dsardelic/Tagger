@@ -1,22 +1,28 @@
+import contextlib
 import os
 from pathlib import Path
 from typing import List, Optional, Tuple, Union
 from urllib.parse import quote
 
 from django.http import JsonResponse
-from django.http.response import HttpResponseNotAllowed
 from django.shortcuts import redirect, render
 
 from pathtagger import db_operations as db
 from Tagger import params, settings
 
 
+class MyException(Exception):
+    pass
+
+
 class MyPath:
     def __init__(self, value: Union[Path, str]):
         if isinstance(value, Path):
             self.raw_path_str = str(value)
-        else:
+        elif isinstance(value, str):
             self.raw_path_str = value
+        else:
+            raise MyException("Invalid MyPath parameter")
 
     @property
     def path(self) -> Path:
@@ -32,12 +38,13 @@ class MyPath:
 
     @property
     def db_path_str(self) -> Optional[str]:
-        if not params.BASE_PATH:
-            return self.posix_path_str
-        if self.path == params.BASE_PATH:
-            return "/"
-        if params.BASE_PATH in self.path.parents:
-            return "/".join(self.path.parts[len(params.BASE_PATH.parts) :])
+        if self.is_allowed:
+            if not params.BASE_PATH:
+                return self.posix_path_str
+            if self.path == params.BASE_PATH:
+                return "/"
+            if params.BASE_PATH in self.path.parents:
+                return "/".join(self.path.parts[len(params.BASE_PATH.parts) :])
         return None
 
     @property
@@ -58,40 +65,16 @@ class MyPath:
         return self
 
 
-def _is_allowed_path(path: Path) -> bool:
-    return (
-        not params.BASE_PATH
-        or path == params.BASE_PATH
-        or params.BASE_PATH in path.parents
-    )
-
-
-def _get_db_path_str(path: Path) -> Optional[str]:
-    if not params.BASE_PATH:
-        return path.as_posix()
-    if path == params.BASE_PATH:
-        return "/"
-    if params.BASE_PATH in path.parents:
-        return "/".join(path.parts[len(params.BASE_PATH.parts) :])
-    return None
-
-
-def _join_with_base_path(path: Path) -> Path:
-    if params.BASE_PATH:
-        return params.BASE_PATH if str(path) == "/" else params.BASE_PATH.joinpath(path)
-    return path
-
-
 def _get_extended_dataset(dataset):
     for element in dataset:
         db_path_str = element["path"]
         db_path = Path(db_path_str)
-        path = _join_with_base_path(db_path)
-        element["path_str"] = path.as_posix()
-        element["system_path_str"] = str(path)
+        mypath = MyPath(db_path_str).join_with_base_path()
+        element["path_str"] = mypath.posix_path_str
+        element["system_path_str"] = mypath.system_path_str
         element["db_path_str"] = db_path.as_posix()
-        element["path_exists"] = path.exists()
-        element["path_is_dir"] = path.is_dir()
+        element["path_exists"] = mypath.path.exists()
+        element["path_is_dir"] = mypath.path.is_dir()
         if element.get("tag_ids", []):
             element["tags"] = [
                 db.get_tag_by_id(int(mapping_tag_id))
@@ -115,27 +98,24 @@ def _get_drive_root_dirs():
 
 
 def mapping_details(request, mapping_id):
-    if request.method == "GET":
-        return render(
-            request,
-            "pathtagger/mapping_details.html",
-            {"mapping": _get_extended_dataset([db.get_mapping(mapping_id)]).pop(),},
-        )
     if request.method == "POST":
-        if path_str := request.POST.get("path", ""):
-            if _is_allowed_path(path := Path(path_str)):
-                db.update_mapping(mapping_id, _get_db_path_str(path))
+        with contextlib.suppress(MyException):
+            mypath = MyPath(request.POST.get("path", None))
+            if mypath.is_allowed:
+                db.update_mapping(mapping_id, mypath.db_path_str)
         return redirect("pathtagger:mappings_list")
-    return HttpResponseNotAllowed(["GET", "POST"])
+    return render(
+        request,
+        "pathtagger/mapping_details.html",
+        {"mapping": _get_extended_dataset([db.get_mapping(mapping_id)]).pop()},
+    )
 
 
 def add_mapping(request):
-    if path_str := request.POST.get("path", ""):
-        path = Path(path_str)
-        if _is_allowed_path(path) and not db.get_mapping_by_path(
-            _get_db_path_str(path)
-        ):
-            db.insert_mapping(_get_db_path_str(path), [])
+    with contextlib.suppress(MyException):
+        mypath = MyPath(request.POST.get("path", None))
+        if mypath.is_allowed and not db.get_mapping_by_path(mypath.db_path_str):
+            db.insert_mapping(mypath.db_path_str, [])
     return redirect("pathtagger:mappings_list")
 
 
@@ -283,7 +263,7 @@ def path_details(request, path_str):
             path_children = [
                 {
                     "path_str": path_child.as_posix(),
-                    "db_path_str": _get_db_path_str(path_child),
+                    "db_path_str": MyPath(path_child).db_path_str,
                     "name": path_child.name,
                     "is_dir": path_child.is_dir(),
                 }
@@ -307,13 +287,13 @@ def path_details(request, path_str):
             "ajax_path_str": quote(path_str),
             "is_root_path": path.anchor == str(path),
             "path_exists": path.exists(),
-            "path_is_favorite": bool(db.get_favorite_path(_get_db_path_str(path))),
+            "path_is_favorite": bool(db.get_favorite_path(MyPath(path).db_path_str)),
             "path_parent": path.parent.as_posix(),
             "path_tokens": path_tokens,
             "path_children": path_children,
             "tags": db.get_all_tags(),
             "drive_root_dirs": _get_drive_root_dirs(),
-            "is_tagging_allowed": _is_allowed_path(path),
+            "is_tagging_allowed": MyPath(path).is_allowed,
         },
     )
 
@@ -339,18 +319,15 @@ def edit_path_tags(request):
 
 
 def toggle_favorite_path(request):
-    if path_str := request.POST.get("path", ""):
-        path = Path(path_str)
-        if db_path_str := _get_db_path_str(path):
-            if db.get_favorite_path(db_path_str):
-                # currently a favorite
-                db.delete_favorite_path(db_path_str)
-                is_favorite = False
-            elif _is_allowed_path(path):
-                # currently not a favorite
-                db.insert_favorite_path(db_path_str)
+    with contextlib.suppress(MyException):
+        mypath = MyPath(request.POST.get("path", None))
+        MyPath(None)
+        if mypath.is_allowed:
+            if not db.get_favorite_path(mypath.db_path_str):
+                db.insert_favorite_path(mypath.db_path_str)
                 is_favorite = True
             else:
+                db.delete_favorite_path(mypath.db_path_str)
                 is_favorite = False
             if request.is_ajax():
                 return JsonResponse(

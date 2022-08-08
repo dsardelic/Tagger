@@ -1,8 +1,6 @@
 import os
 import tempfile
 import unittest.mock
-from pathlib import PosixPath, WindowsPath
-from unittest.mock import sentinel
 
 from bs4 import BeautifulSoup
 from django.apps import apps
@@ -27,6 +25,7 @@ def _row_count(soup, element_id):
     return len(soup.select_one(f"#{element_id}").find_all("tr"))
 
 
+# pylint: disable=R0904
 class Test(SimpleTestCase):
     def setUp(self):
         self.client = Client()
@@ -46,147 +45,7 @@ class Test(SimpleTestCase):
     def tearDown(self):
         os.remove(self.db_tmp_file.name)
 
-    @unittest.skipUnless(os.name == "posix", "requires Posix")
-    def test__is_allowed_path_posix(self):
-        test_data = [
-            ("no base path", None, "/home/dino/Videos", True),
-            ("base path parent", "/home/dino", "/home/dino/Videos", True),
-            ("is base path", "/home/dino/Videos", "/home/dino/Videos", True),
-            (
-                "base path descendant",
-                "/home/dino/Videos/movies",
-                "/home/dino/Videos",
-                False,
-            ),
-            ("no relation with base path", "/opt", "/home/dino/Videos", False),
-        ]
-        for i, (_, base_path_str, path_str, exp_rval) in enumerate(test_data):
-            with self.subTest(i=i):
-                params.BASE_PATH = (
-                    PosixPath(base_path_str + os.sep) if base_path_str else None
-                )
-                self.assertEqual(views._is_allowed_path(PosixPath(path_str)), exp_rval)
-
-    @unittest.skipUnless(os.name == "nt", "requires Windows")
-    def test__is_allowed_path_nt(self):
-        test_data = [
-            ("no base path", None, r"C:\tools\eclipse", True),
-            ("base path parent", r"C:\tools", r"C:\tools\eclipse", True,),
-            ("is base path", r"C:\tools\eclipse", r"C:\tools\eclipse", True,),
-            (
-                "base path descendant",
-                r"C:\tools\eclipse\plugins",
-                r"C:\tools\eclipse",
-                False,
-            ),
-            ("no relation with base path", r"C:\Windows", r"C:\tools\eclipse", False,),
-        ]
-        for i, (_, base_path_str, path_str, exp_rval) in enumerate(test_data):
-            with self.subTest(i=i):
-                params.BASE_PATH = (
-                    WindowsPath(base_path_str + os.sep) if base_path_str else None
-                )
-                self.assertEqual(
-                    views._is_allowed_path(WindowsPath(path_str)), exp_rval
-                )
-
-    @unittest.skipUnless(os.name == "posix", "requires Posix")
-    def test__get_db_path_str_posix(self):
-        test_data = [
-            ("no base path", None, "/home/dino/Videos", "/home/dino/Videos"),
-            ("no relation with base path", "/opt", "/home/dino/Videos", None),
-            (
-                "base path parent",
-                "/home/dino/Videos/movies",
-                "/home/dino/Videos",
-                None,
-            ),
-            ("is base path", "/home/dino/Videos", "/home/dino/Videos", "/"),
-            ("base path descendant", "/home/dino", "/home/dino/Videos", "Videos"),
-        ]
-        for i, (_, base_path_str, path_str, exp_rval) in enumerate(test_data):
-            with self.subTest(i=i):
-                params.BASE_PATH = (
-                    PosixPath(base_path_str + os.sep) if base_path_str else None
-                )
-                self.assertEqual(views._get_db_path_str(PosixPath(path_str)), exp_rval)
-
-    @unittest.skipUnless(os.name == "nt", "requires Windows")
-    def test__get_db_path_str_nt(self):
-        test_data = [
-            ("no base path", None, r"C:\tools\eclipse", "C:/tools/eclipse"),
-            ("no relation with base path", r"C:\Windows", r"C:\tools\eclipse", None),
-            (
-                "base path parent",
-                r"C:\tools\eclipse\plugins",
-                r"C:\tools\eclipse",
-                None,
-            ),
-            (
-                "is base path",
-                r"C:\tools\eclipse",
-                r"C:\tools\eclipse",
-                "C:/tools/eclipse",
-            ),
-            ("base path descendant", r"C:\tools", r"C:\tools\eclipse", "eclipse"),
-        ]
-        for i, (_, base_path_str, path_str, exp_rval) in enumerate(test_data):
-            with self.subTest(i=i):
-                params.BASE_PATH = (
-                    WindowsPath(base_path_str + os.sep) if base_path_str else None
-                )
-                self.assertEqual(
-                    views._get_db_path_str(WindowsPath(path_str)), exp_rval
-                )
-
-    @unittest.skipUnless(os.name == "posix", "requires Posix")
-    def test__join_with_base_path_posix(self):
-        test_data = [
-            ("no base path", None, PosixPath("Joinee"), PosixPath("Joinee")),
-            (
-                "base path and root joinee",
-                "/home/dino",
-                PosixPath("/"),
-                PosixPath("/home/dino"),
-            ),
-            (
-                "base path and non-root joinee",
-                "/home/dino",
-                PosixPath("Joinee"),
-                PosixPath("/home/dino/Joinee"),
-            ),
-        ]
-        for i, (_, base_path_str, path, exp_rval) in enumerate(test_data):
-            with self.subTest(i=i):
-                params.BASE_PATH = (
-                    PosixPath(base_path_str + os.sep) if base_path_str else None
-                )
-                self.assertEqual(views._join_with_base_path(path), exp_rval)
-
-    @unittest.skipUnless(os.name == "nt", "requires Windows")
-    def test__join_with_base_path_nt(self):
-        test_data = [
-            ("no base path", None, WindowsPath("Joinee"), WindowsPath("Joinee")),
-            (
-                "base path and root joinee",
-                r"C:\tools",
-                WindowsPath("/"),
-                WindowsPath(r"C:\tools"),
-            ),
-            (
-                "base path and non-root joinee",
-                r"C:\tools",
-                WindowsPath("Joinee"),
-                WindowsPath(r"C:\tools\Joinee"),
-            ),
-        ]
-        for i, (_, base_path_str, path, exp_rval) in enumerate(test_data):
-            with self.subTest(i=i):
-                params.BASE_PATH = (
-                    WindowsPath(base_path_str + os.sep) if base_path_str else None
-                )
-                self.assertEqual(views._join_with_base_path(path), exp_rval)
-
+    # pylint: disable=W0212
     def test__get_extended_dataset(self):
         docs = db_operations.get_all_mappings()
         extended_dataset = views._get_extended_dataset(docs)
@@ -204,10 +63,11 @@ class Test(SimpleTestCase):
                 ]
             )
         )
-        self.assertEquals(
+        self.assertEqual(
             ["tags" in doc for doc in docs], [True, True, True, True, True]
         )
 
+    # pylint: disable=W0212
     def test__get_drive_root_dirs(self):
         if os.name == "nt":
             self.assertIn(
@@ -233,79 +93,67 @@ class Test(SimpleTestCase):
             3,
         )
 
-    @parameterized.expand([("allowed", True), ("not allowed", False)])
+    @parameterized.expand(
+        [
+            ("path missing", "", False, False),
+            ("path not allowed", "new_path_str", False, False),
+            ("path allowed", "new_path_str", True, True),
+        ]
+    )
+    @unittest.mock.patch("pathtagger.views.MyPath", autospec=True)
     @unittest.mock.patch.object(views.db, "update_mapping")
-    @unittest.mock.patch.object(views, "_is_allowed_path")
-    @unittest.mock.patch.object(views, "_get_db_path_str")
     def test_mapping_details_post(
         self,
         _,
+        new_db_path_str,
         is_allowed_path,
-        mock__get_db_path_str,
-        mock__is_allowed_path,
+        exp_update_mapping_called,
         mock_update_mapping,
+        mock_mypath,
     ):
-        mapping_id = int()
-        new_path_str = sentinel.new_path_str
-        mock__is_allowed_path.return_value = is_allowed_path
-        mock__get_db_path_str.return_value = sentinel._get_db_path_str_rval
+        mock_mypath(new_db_path_str).is_allowed = is_allowed_path
+        mock_mypath(new_db_path_str).db_path_str = new_db_path_str
+        mapping_id = 1
         response = self.client.post(
             reverse(
                 f"{urls.app_name}:mapping_details", kwargs={"mapping_id": mapping_id}
             ),
-            {"path": new_path_str},
+            {"path": new_db_path_str},
         )
         self.assertRedirects(response, reverse(f"{urls.app_name}:mappings_list"))
-        if is_allowed_path:
-            mock__get_db_path_str.assert_called()
-            mock_update_mapping.assert_called_once_with(
-                mapping_id, sentinel._get_db_path_str_rval
-            )
+        if exp_update_mapping_called:
+            mock_update_mapping.assert_called_once_with(mapping_id, new_db_path_str)
         else:
             mock_update_mapping.assert_not_called()
 
-    def test_mapping_details_other(self):
-        response = self.client.delete(
-            reverse(f"{urls.app_name}:mapping_details", kwargs={"mapping_id": 4})
-        )
-        self.assertEqual(response.status_code, 405)
-
     @parameterized.expand(
         [
-            ("not allowed and does not exist", False, False, 0),
-            ("not allowed and already exists", False, True, 0),
-            ("allowed and does not exist", True, False, 1),
-            ("allowed but already exists", True, True, 0),
+            ("missing or empty string", "", False, False),
+            ("not allowed and does not exist", "foo", False, False),
+            ("not allowed and already exists", "/home/dino/Downloads", False, False),
+            ("allowed and does not exist", "foo", True, True),
+            ("allowed but already exists", "/home/dino/Downloads", True, False),
         ]
     )
-    @unittest.mock.patch.object(views.db, "get_mapping_by_path")
+    @unittest.mock.patch("pathtagger.views.MyPath", autospec=True)
     @unittest.mock.patch.object(views.db, "insert_mapping")
-    @unittest.mock.patch.object(views, "_get_db_path_str")
-    @unittest.mock.patch.object(views, "_is_allowed_path")
     def test_add_mapping(
         self,
         _,
-        is_allowed_path,
-        mapping_by_path_already_exists,
-        exp_new_mapping_path_count,
-        mock__is_allowed_path,
-        mock__get_db_path_str,
+        db_path_str,
+        path_is_allowed,
+        exp_insert_mapping_called,
         mock_insert_mapping,
-        mock_get_mapping_by_path,
+        mock_mypath,
     ):
-        new_mapping_path = sentinel.new_mapping_path
-        mock_get_mapping_by_path.return_value = mapping_by_path_already_exists
-        mock__get_db_path_str.return_value = sentinel._get_db_path_str_rval
-        mock__is_allowed_path.return_value = is_allowed_path
+        mock_mypath(db_path_str).is_allowed = path_is_allowed
+        mock_mypath(db_path_str).db_path_str = db_path_str
         response = self.client.post(
-            reverse(f"{urls.app_name}:add_mapping"), {"path": new_mapping_path}
+            reverse(f"{urls.app_name}:add_mapping"), {"path": db_path_str}
         )
         self.assertRedirects(response, reverse(f"{urls.app_name}:mappings_list"))
-        if exp_new_mapping_path_count:
-            mock__get_db_path_str.assert_called()
-            mock_insert_mapping.assert_called_once_with(
-                sentinel._get_db_path_str_rval, []
-            )
+        if exp_insert_mapping_called:
+            mock_insert_mapping.assert_called_once_with(db_path_str, [])
         else:
             mock_insert_mapping.assert_not_called()
 
@@ -336,7 +184,6 @@ class Test(SimpleTestCase):
         ]
     )
     def test_create_tags(self, _, new_tag_names, exp_new_tags_count):
-        new_tag_names = new_tag_names
         self.assertEqual(len(views.create_tags(new_tag_names)), exp_new_tags_count)
 
     def test_edit_mappings_action_delete(self):
@@ -533,15 +380,6 @@ class Test(SimpleTestCase):
     def test_edit_path_tags(self):
         ...
 
-    """
-    ("no or empty path parameter", "", None),
-    ("currently a favorite", " ", True),
-    ("currently not a favorite", " ", False),
-    """
-    # _get_db_path_str
-    # db.get_favorite_path
-    # db.delete_favorite_path
-    # db.insert_favorite_path
     def test_toggle_favorite_path(self):
         ...
 
