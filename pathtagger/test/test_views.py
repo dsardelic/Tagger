@@ -31,8 +31,7 @@ class Test(SimpleTestCase):
         self.client = Client()
         self.db_tmp_file = tempfile.NamedTemporaryFile(mode="wt", delete=False)
         with open(
-            apps.get_app_config(urls.app_name).path
-            + "/test/resources/TestTaggerDB.json",
+            apps.get_app_config(urls.app_name).path + "/test/resources/TaggerDB.json",
             "rt",
         ) as ref_db_file:
             self.db_tmp_file.write(ref_db_file.read())
