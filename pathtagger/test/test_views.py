@@ -464,12 +464,6 @@ class Test(SimpleTestCase):
             soup.select_one("input[form=TagEditForm][name=color]")["value"], new_color
         )
 
-    def test_tag_details_other(self):
-        response = self.client.put(
-            reverse(f"{urls.app_name}:tag_details", kwargs={"tag_id": 2})
-        )
-        self.assertEqual(response.status_code, 405)
-
     @parameterized.expand(
         [
             ("name and color", "New tag", "#AB3456", 4),
@@ -539,12 +533,17 @@ class Test(SimpleTestCase):
     def test_edit_path_tags(self):
         ...
 
-    def test_toggle_favorite_path_post(self):
+    """
+    ("no or empty path parameter", "", None),
+    ("currently a favorite", " ", True),
+    ("currently not a favorite", " ", False),
+    """
+    # _get_db_path_str
+    # db.get_favorite_path
+    # db.delete_favorite_path
+    # db.insert_favorite_path
+    def test_toggle_favorite_path(self):
         ...
-
-    def test_toggle_favorite_path_other(self):
-        response = self.client.patch(reverse(f"{urls.app_name}:toggle_favorite_path"))
-        self.assertEqual(response.status_code, 405)
 
     @parameterized.expand([("no base path", None), ("with base path", "/home/dino")])
     @unittest.skipUnless(os.name == "posix", "requires Posix")

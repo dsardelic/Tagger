@@ -1,6 +1,6 @@
 import os
 from pathlib import Path
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Union
 from urllib.parse import quote
 
 from django.http import JsonResponse
@@ -9,6 +9,53 @@ from django.shortcuts import redirect, render
 
 from pathtagger import db_operations as db
 from Tagger import params, settings
+
+
+class MyPath:
+    def __init__(self, value: Union[Path, str]):
+        if isinstance(value, Path):
+            self.raw_path_str = str(value)
+        else:
+            self.raw_path_str = value
+
+    @property
+    def path(self) -> Path:
+        return Path(self.raw_path_str)
+
+    @property
+    def posix_path_str(self) -> str:
+        return self.path.as_posix()
+
+    @property
+    def system_path_str(self) -> str:
+        return str(self.path)
+
+    @property
+    def db_path_str(self) -> Optional[str]:
+        if not params.BASE_PATH:
+            return self.posix_path_str
+        if self.path == params.BASE_PATH:
+            return "/"
+        if params.BASE_PATH in self.path.parents:
+            return "/".join(self.path.parts[len(params.BASE_PATH.parts) :])
+        return None
+
+    @property
+    def is_allowed(self) -> bool:
+        return (
+            not params.BASE_PATH
+            or self.path == params.BASE_PATH
+            or params.BASE_PATH in self.path.parents
+        )
+
+    def join_with_base_path(self) -> "MyPath":
+        if params.BASE_PATH:
+            return MyPath(
+                params.BASE_PATH
+                if self.posix_path_str == "/"
+                else params.BASE_PATH.joinpath(self.path)
+            )
+        return self
 
 
 def _is_allowed_path(path: Path) -> bool:
@@ -173,15 +220,6 @@ def mappings_list(request):
 
 
 def tag_details(request, tag_id):
-    if request.method == "GET":
-        return render(
-            request,
-            "pathtagger/tag_details.html",
-            {
-                "tag": db.get_tag_by_id(tag_id),
-                "mappings": _get_extended_dataset(db.get_tag_mappings(tag_id)),
-            },
-        )
     if request.method == "POST":
         db.update_tag(
             tag_id,
@@ -190,7 +228,14 @@ def tag_details(request, tag_id):
         )
         request.method = "GET"
         return tag_details(request, tag_id)
-    return HttpResponseNotAllowed(["GET", "POST"])
+    return render(
+        request,
+        "pathtagger/tag_details.html",
+        {
+            "tag": db.get_tag_by_id(tag_id),
+            "mappings": _get_extended_dataset(db.get_tag_mappings(tag_id)),
+        },
+    )
 
 
 def add_tag(request):
