@@ -4,14 +4,19 @@ from tinydb import Query, TinyDB, where
 
 from Tagger import params
 
-DB = TinyDB(
-    params.DB_PATH,
-    sort_keys=True,
-    indent=4,
-    separators=(",", ": "),
-    encoding="utf-8",
-    ensure_ascii=False,
-)
+
+def load_db(path):
+    return TinyDB(
+        path,
+        sort_keys=True,
+        indent=4,
+        separators=(",", ": "),
+        encoding="utf-8",
+        ensure_ascii=False,
+    )
+
+
+DB = load_db(params.DB_PATH)
 
 
 def get_all_favorite_paths():
@@ -43,7 +48,9 @@ def insert_tag(name: str, color: str):
 
 
 def delete_tags(tag_ids: List[int]):
-    mappings = DB.search(Query().tag_ids.any([str(tag_id) for tag_id in tag_ids]))
+    mappings = DB.table("_default").search(
+        Query().tag_ids.any([str(tag_id) for tag_id in tag_ids])
+    )
     for mapping in mappings:
         mapping["tag_ids"] = list(
             set(mapping["tag_ids"]) - {str(tag_id) for tag_id in tag_ids}
@@ -54,7 +61,7 @@ def delete_tags(tag_ids: List[int]):
 
 
 def get_tag_mappings(tag_id: int):
-    return DB.search(Query().tag_ids.all([str(tag_id)]))
+    return DB.table("_default").search(Query().tag_ids.all([str(tag_id)]))
 
 
 def get_tag_by_id(tag_id: int):
@@ -122,12 +129,12 @@ def get_filtered_mappings(
     tag_str_ids_to_include = [str(tag_id) for tag_id in tag_ids_to_include]
     tag_str_ids_to_exclude = [str(tag_id) for tag_id in tag_ids_to_exclude]
     if path_name_like:
-        return DB.search(
+        return DB.table("_default").search(
             (Query().tag_ids.all(tag_str_ids_to_include))
             & (~(Query().tag_ids.any(tag_str_ids_to_exclude)))
             & (Query().path.test(lambda x: x.lower().find(path_name_like.lower()) > -1))
         )
-    return DB.search(
+    return DB.table("_default").search(
         (Query().tag_ids.all(tag_str_ids_to_include))
         & (~(Query().tag_ids.any(tag_str_ids_to_exclude)))
     )

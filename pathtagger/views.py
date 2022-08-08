@@ -1,13 +1,14 @@
 import os
 from pathlib import Path
+from typing import List, Optional, Tuple
 from urllib.parse import quote
 
 from django.http import JsonResponse
+from django.http.response import HttpResponseNotAllowed
 from django.shortcuts import redirect, render
 
+from pathtagger import db_operations as db
 from Tagger import params, settings
-
-from . import db_operations as db
 
 
 def _is_allowed_path(path: Path) -> bool:
@@ -18,27 +19,27 @@ def _is_allowed_path(path: Path) -> bool:
     )
 
 
-def _get_db_path_str(path: Path) -> str:
+def _get_db_path_str(path: Path) -> Optional[str]:
     if not params.BASE_PATH:
         return path.as_posix()
     if path == params.BASE_PATH:
         return "/"
     if params.BASE_PATH in path.parents:
         return "/".join(path.parts[len(params.BASE_PATH.parts) :])
-    return ""
+    return None
+
+
+def _join_with_base_path(path: Path) -> Path:
+    if params.BASE_PATH:
+        return params.BASE_PATH if str(path) == "/" else params.BASE_PATH.joinpath(path)
+    return path
 
 
 def _get_extended_dataset(dataset):
     for element in dataset:
         db_path_str = element["path"]
         db_path = Path(db_path_str)
-        if params.BASE_PATH:
-            if db_path_str == "/":
-                path = params.BASE_PATH
-            else:
-                path = params.BASE_PATH.joinpath(db_path)
-        else:
-            path = db_path
+        path = _join_with_base_path(db_path)
         element["path_str"] = path.as_posix()
         element["system_path_str"] = str(path)
         element["db_path_str"] = db_path.as_posix()
@@ -71,16 +72,14 @@ def mapping_details(request, mapping_id):
         return render(
             request,
             "pathtagger/mapping_details.html",
-            {
-                "mapping": _get_extended_dataset([db.get_mapping(mapping_id)]).pop(),
-                "tags": db.get_all_tags(),
-            },
+            {"mapping": _get_extended_dataset([db.get_mapping(mapping_id)]).pop(),},
         )
     if request.method == "POST":
         if path_str := request.POST.get("path", ""):
             if _is_allowed_path(path := Path(path_str)):
                 db.update_mapping(mapping_id, _get_db_path_str(path))
-    return redirect("pathtagger:mappings_list")
+        return redirect("pathtagger:mappings_list")
+    return HttpResponseNotAllowed(["GET", "POST"])
 
 
 def add_mapping(request):
@@ -93,6 +92,29 @@ def add_mapping(request):
     return redirect("pathtagger:mappings_list")
 
 
+def parse_tag_ids_to_append_and_remove(querydict) -> Tuple[List[int], List[int]]:
+    tag_ids_to_append, tag_ids_to_remove = [], []
+    for key, action in querydict.items():
+        if key.startswith("tag_"):
+            if action == "append":
+                tag_ids_to_append.append(int(key.strip("tag_")))
+            elif action == "remove":
+                tag_ids_to_remove.append(int(key.strip("tag_")))
+            # ignore tags that are to be simultaneously appended and removed
+            # i.e. set(action) == {"append", "remove"}
+    return tag_ids_to_append, tag_ids_to_remove
+
+
+def create_tags(new_tag_names: str) -> List[int]:
+    tag_ids = []
+    if new_tag_names:
+        for name in new_tag_names.strip(",").split(","):
+            name = name.strip()
+            if name and not db.get_tag_by_name(name):
+                tag_ids.append(db.insert_tag(name, params.DEFAULT_TAG_COLOR))
+    return tag_ids
+
+
 def edit_mappings(request):
     if request.POST.get("action_delete"):
         return delete_mappings(request)
@@ -100,34 +122,21 @@ def edit_mappings(request):
         if mapping_ids := [
             int(mapping_id) for mapping_id in request.POST.getlist("mapping_id", [])
         ]:
-            tag_ids_to_append = []
-            tag_ids_to_remove = []
-            for key in request.POST:
-                if key.startswith("tag_"):
-                    value = request.POST.get(key, "")
-                    if value == "append":
-                        tag_ids_to_append.append(int(key.strip("tag_")))
-                    elif value == "remove":
-                        tag_ids_to_remove.append(int(key.strip("tag_")))
-            if new_tag_names_str := request.POST.get("new_tag_names", ""):
-                for name in new_tag_names_str.strip(",").split(","):
-                    name = name.strip()
-                    if tag := db.get_tag_by_name(name):
-                        tag_ids_to_append.append(tag.doc_id)
-                    else:
-                        tag_ids_to_append.append(
-                            db.insert_tag(name, params.DEFAULT_TAG_COLOR)
-                        )
+            tag_ids_to_append, tag_ids_to_remove = parse_tag_ids_to_append_and_remove(
+                request.POST
+            )
+            tag_ids_to_append.extend(create_tags(request.POST.get("new_tag_names", "")))
             db.append_tags_to_mappings(tag_ids_to_append, mapping_ids)
             db.remove_tags_from_mappings(tag_ids_to_remove, mapping_ids)
-    return redirect("pathtagger:mappings_list")
+    request.method = "GET"
+    return mappings_list(request)
 
 
 def delete_mappings(request):
     db.delete_mappings(
         [int(mapping_id) for mapping_id in request.POST.getlist("mapping_id", [])]
     )
-    return redirect("pathtagger:mappings_list")
+    return mappings_list(request)
 
 
 def mappings_list(request):
@@ -174,26 +183,26 @@ def tag_details(request, tag_id):
             },
         )
     if request.method == "POST":
-        tag_id = int(request.POST.get("tag_id", "0"))
         db.update_tag(
             tag_id,
             request.POST.get("name", ""),
             request.POST.get("color", params.DEFAULT_TAG_COLOR),
         )
-        return redirect("pathtagger:tag_details", tag_id=tag_id)
-    return redirect("pathtagger:tags_list")
+        request.method = "GET"
+        return tag_details(request, tag_id)
+    return HttpResponseNotAllowed(["GET", "POST"])
 
 
 def add_tag(request):
     name = request.POST.get("name", "")
     if name and not db.get_tag_by_name(name):
         db.insert_tag(name, request.POST.get("color", params.DEFAULT_TAG_COLOR))
-    return redirect("pathtagger:tags_list")
+    return tags_list(request)
 
 
 def delete_tags(request):
     db.delete_tags([int(tag_id) for tag_id in request.POST.getlist("tag_id", [])])
-    return redirect("pathtagger:tags_list")
+    return tags_list(request)
 
 
 def tags_list(request):
@@ -209,7 +218,8 @@ def remove_tag_from_mappings(request):
         [tag_id],
         [int(mapping_id) for mapping_id in request.POST.getlist("mapping_id", [])],
     )
-    return redirect("pathtagger:tag_details", tag_id=tag_id)
+    request.method = "GET"
+    return tag_details(request, tag_id)
 
 
 def path_details(request, path_str):
@@ -272,24 +282,10 @@ def edit_path_tags(request):
                 mapping_ids.append(mapping.doc_id)
             else:
                 mapping_ids.append(db.insert_mapping(path, []))
-        tag_ids_to_append = []
-        tag_ids_to_remove = []
-        for key in request.POST:
-            if key.startswith("tag_"):
-                value = request.POST.get(key, "")
-                if value == "append":
-                    tag_ids_to_append.append(int(key.strip("tag_")))
-                elif value == "remove":
-                    tag_ids_to_remove.append(int(key.strip("tag_")))
-        if new_tag_names_str := request.POST.get("new_tag_names", ""):
-            for name in new_tag_names_str.strip(",").split(","):
-                name = name.strip()
-                if tag := db.get_tag_by_name(name):
-                    tag_ids_to_append.append(tag.doc_id)
-                else:
-                    tag_ids_to_append.append(
-                        db.insert_tag(name, params.DEFAULT_TAG_COLOR)
-                    )
+        tag_ids_to_append, tag_ids_to_remove = parse_tag_ids_to_append_and_remove(
+            request.POST
+        )
+        tag_ids_to_append.extend(create_tags(request.POST.get("new_tag_names", "")))
         db.append_tags_to_mappings(tag_ids_to_append, mapping_ids)
         db.remove_tags_from_mappings(tag_ids_to_remove, mapping_ids)
     return redirect(
@@ -300,27 +296,31 @@ def edit_path_tags(request):
 def toggle_favorite_path(request):
     if path_str := request.POST.get("path", ""):
         path = Path(path_str)
-        db_path_str = _get_db_path_str(path)
-        if not db_path_str:
-            db_path_str = "/"
-        if db.get_favorite_path(db_path_str):
-            db.delete_favorite_path(db_path_str)
-            is_favorite = False
-        elif _is_allowed_path(path):
-            db.insert_favorite_path(db_path_str)
-            is_favorite = True
-        else:
-            is_favorite = False
-        if request.is_ajax():
-            return JsonResponse({"status": "ok", "is_favorite": str(bool(is_favorite))})
+        if db_path_str := _get_db_path_str(path):
+            if db.get_favorite_path(db_path_str):
+                # currently a favorite
+                db.delete_favorite_path(db_path_str)
+                is_favorite = False
+            elif _is_allowed_path(path):
+                # currently not a favorite
+                db.insert_favorite_path(db_path_str)
+                is_favorite = True
+            else:
+                is_favorite = False
+            if request.is_ajax():
+                return JsonResponse(
+                    {"status": "ok", "is_favorite": str(bool(is_favorite))}
+                )
     return redirect("pathtagger:homepage")
 
 
-def root_path_redirect(request):  # pylint: disable=W0613
-    return redirect(
-        "pathtagger:path_details",
-        path_str=Path(Path(settings.BASE_DIR).anchor).as_posix(),
+def root_path_redirect(_):
+    root_path = (
+        Path(params.BASE_PATH)
+        if params.BASE_PATH
+        else Path(Path(settings.BASE_DIR).anchor)
     )
+    return redirect("pathtagger:path_details", path_str=root_path.as_posix())
 
 
 def homepage(request):

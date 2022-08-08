@@ -32,41 +32,45 @@
         {% if mappings %}
             <div class="div-title">MAPPINGS</div>
             <table style="margin-bottom:20px;">
-                <tr>
-                    <th>
-                        <input type="checkbox" onclick="toggle_all_checkboxes(this, 'mapping_id');"/>
-                    </th>
-                    <th>Path</th>
-                    <th>Tags</th>
-                    <th>Actions</th>
-                </tr>
-                {% for mapping in mappings|dictsort:'path_str.lower' %}
-                    <tr>
-                        <td>
-                            <input form="mappingsEditForm" type="checkbox" name="mapping_id" value="{{ mapping.doc_id }}"/>
-                        </td>
-                        <td {% if not mapping.path_exists %} class="nonexistent-path" title="Nonexistent path" {% endif %} style="text-align:left;">
-                            {% if mapping.path_is_dir %}
-                                <a href="{% url 'pathtagger:path_details' path_str=mapping.path_str %}">{{ mapping.system_path_str }}</a>
-                            {% else %}
-                                {{ mapping.system_path_str }}
-                            {% endif %}
-                        </td>
-                        <td>
-                            {% for mapping_tag in mapping.tags|dictsort:'name.lower' %}
-                                    <a class="tag" style="background-color:{{ mapping_tag.color }}" href="{% url 'pathtagger:tag_details' tag_id=mapping_tag.doc_id %}">{{ mapping_tag.name }}</a>
-                            {% endfor %}
-                        </td>
-                        <td style='white-space: nowrap'>
-                            <a href="{% url 'pathtagger:mapping_details' mapping_id=mapping.doc_id %}" class="button">Edit</a>
-                            <form id="deleteMapping_{{ mapping.doc_id }}_Form" action="{% url 'pathtagger:delete_mappings' %}" method="POST" style="display:inline-block;">
-                                <input form="deleteMapping_{{ mapping.doc_id }}_Form" type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}"/>
-                                <input form="deleteMapping_{{ mapping.doc_id }}_Form" type="hidden" name="mapping_id" value="{{ mapping.doc_id }}"/>
-                                <input form="deleteMapping_{{ mapping.doc_id }}_Form" type="submit" value="Delete"/>
-                            </form>
-                        </td>
-                    </tr>
-                {% endfor %}
+            	<thead>
+	                <tr>
+	                    <th>
+	                        <input type="checkbox" onclick="toggle_all_checkboxes(this, 'mapping_id');"/>
+	                    </th>
+	                    <th>Path</th>
+	                    <th>Tags</th>
+	                    <th>Actions</th>
+	                </tr>
+                </thead>
+                <tbody id="mappings_table_body">
+	                {% for mapping in mappings|dictsort:'path_str.lower' %}
+	                    <tr>
+	                        <td>
+                            	<input form="mappingsEditForm" type="checkbox" name="mapping_id" value="{{ mapping.doc_id }}"/>
+	                        </td>
+	                        <td {% if not mapping.path_exists %} class="nonexistent-path" title="Nonexistent path" {% endif %} style="text-align:left;">
+	                            {% if mapping.path_is_dir %}
+	                                <a href="{% url 'pathtagger:path_details' path_str=mapping.path_str %}">{{ mapping.system_path_str }}</a>
+	                            {% else %}
+	                                {{ mapping.system_path_str }}
+	                            {% endif %}
+	                        </td>
+	                        <td>
+	                            {% for mapping_tag in mapping.tags|dictsort:'name.lower' %}
+	                                    <a class="tag" style="background-color:{{ mapping_tag.color }}" href="{% url 'pathtagger:tag_details' tag_id=mapping_tag.doc_id %}">{{ mapping_tag.name }}</a>
+	                            {% endfor %}
+	                        </td>
+	                        <td style='white-space: nowrap'>
+	                            <a href="{% url 'pathtagger:mapping_details' mapping_id=mapping.doc_id %}" class="button">Edit</a>
+	                            <form id="deleteMapping_{{ mapping.doc_id }}_Form" action="{% url 'pathtagger:delete_mappings' %}" method="POST" style="display:inline-block;">
+	                                <input form="deleteMapping_{{ mapping.doc_id }}_Form" type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}"/>
+	                                <input form="deleteMapping_{{ mapping.doc_id }}_Form" type="hidden" name="mapping_id" value="{{ mapping.doc_id }}"/>
+	                                <input form="deleteMapping_{{ mapping.doc_id }}_Form" type="submit" value="Delete"/>
+	                            </form>
+	                        </td>
+	                    </tr>
+                	{% endfor %}
+                </tbody>
             </table>
             <input form="mappingsEditForm" type="submit" name="action_delete" value="Delete selected"/>
         {% elif no_mappings_at_all %}
@@ -96,32 +100,36 @@
             <form id="mappingFiltersForm" method="GET">
                 {% if tags %}
                     <table style="margin-bottom:10px;">
-                        <tr>
-                            <th rowspan="2">Tag</th>
-                            <th>Include</th>
-                            <th>Exclude</th>
-                        </tr>
-                        <tr>
-                            <td>
-                                <input type="checkbox" onclick="toggle_all_checkboxes(this, 'tag_id_include');" id="ToggleAllIncludeCheckboxes"/>
-                            </td>
-                            <td>
-                                <input type="checkbox" onclick="toggle_all_checkboxes(this, 'tag_id_exclude');" id="ToggleAllExcludeCheckboxes"/>
-                            </td>
-                        </tr>
-                        {% for tag in tags|dictsort:'name.lower' %}
-                            <tr>
-                                <td>
-                                    <a class="tag" style="background-color:{{ tag.color }}" href="{% url 'pathtagger:tag_details' tag_id=tag.doc_id %}">{{ tag.name }}</a>
-                                </td>
-                                <td>
-                                    <input form="mappingFiltersForm" type="checkbox" name="tag_id_include" value="{{ tag.doc_id }}" {% if tag.doc_id in filters.tag_ids_to_include %} checked {% endif %}/>
-                                </td>
-                                <td>
-                                    <input form="mappingFiltersForm" type="checkbox" name="tag_id_exclude" value="{{ tag.doc_id }}" {% if tag.doc_id in filters.tag_ids_to_exclude %} checked {% endif %}/>
-                                </td>
-                            </tr>
-                        {% endfor %}
+                    	<thead>
+	                        <tr>
+	                            <th rowspan="2">Tag</th>
+	                            <th>Include</th>
+	                            <th>Exclude</th>
+	                        </tr>
+	                        <tr>
+	                            <td>
+	                                <input type="checkbox" onclick="toggle_all_checkboxes(this, 'tag_id_include');" id="ToggleAllIncludeCheckboxes"/>
+	                            </td>
+	                            <td>
+	                                <input type="checkbox" onclick="toggle_all_checkboxes(this, 'tag_id_exclude');" id="ToggleAllExcludeCheckboxes"/>
+	                            </td>
+	                        </tr>
+                        </thead>
+                        <tbody id="tags_table_body">>
+	                        {% for tag in tags|dictsort:'name.lower' %}
+	                            <tr>
+	                                <td>
+	                                    <a class="tag" style="background-color:{{ tag.color }}" href="{% url 'pathtagger:tag_details' tag_id=tag.doc_id %}">{{ tag.name }}</a>
+	                                </td>
+	                                <td>
+	                                    <input form="mappingFiltersForm" type="checkbox" name="tag_id_include" value="{{ tag.doc_id }}" {% if tag.doc_id in filters.tag_ids_to_include %} checked {% endif %}/>
+	                                </td>
+	                                <td>
+	                                    <input form="mappingFiltersForm" type="checkbox" name="tag_id_exclude" value="{{ tag.doc_id }}" {% if tag.doc_id in filters.tag_ids_to_exclude %} checked {% endif %}/>
+	                                </td>
+	                            </tr>
+	                        {% endfor %}
+                        </tbody>
                     </table>
                 {% endif %}
                 <div style="margin-bottom:10px;">

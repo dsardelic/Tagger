@@ -27,16 +27,20 @@
         {% if mapping.tags %}
             <div class="div-title">MAPPING TAGS</div>
             <table style="margin-bottom:20px;">
-                <tr>
-                    <th>Tag</th>
-                </tr>
-                {% for mapping_tag in mapping.tags|dictsort:'name.lower' %}
-                    <tr>
-                        <td>
-                            <a class="tag" style="background-color:{{ mapping_tag.color }}" href="{% url 'pathtagger:tag_details' tag_id=mapping_tag.doc_id %}">{{ mapping_tag.name }}</a>
-                        </td>
-                    </tr>
-                {% endfor %}
+            	<thead>
+	                <tr>
+	                    <th>Tag</th>
+	                </tr>
+	            </thead>
+	            <tbody id="mapping_tags_table_body">
+	                {% for mapping_tag in mapping.tags|dictsort:'name.lower' %}
+	                    <tr>
+	                        <td>
+	                            <a class="tag" style="background-color:{{ mapping_tag.color }}" href="{% url 'pathtagger:tag_details' tag_id=mapping_tag.doc_id %}">{{ mapping_tag.name }}</a>
+	                        </td>
+	                    </tr>
+	                {% endfor %}
+                </tbody>
             </table>
         {% else %}
             This mapping has no tags.

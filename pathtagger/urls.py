@@ -5,7 +5,7 @@ from . import views
 app_name = "pathtagger"  # pylint: disable=C0103
 
 urlpatterns = [  # pylint: disable=C0103
-    path("mappings/<int:mapping_id>", views.mapping_details, name="mapping_details"),
+    path("mappings/<int:mapping_id>/", views.mapping_details, name="mapping_details"),
     path("mappings/add/", views.add_mapping, name="add_mapping"),
     path("mappings/edit/", views.edit_mappings, name="edit_mappings"),
     path("mappings/delete/", views.delete_mappings, name="delete_mappings"),

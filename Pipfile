@@ -13,8 +13,12 @@ django = "*"
 [dev-packages]
 black = "*"
 pycodestyle = "*"
-pylint = "*"
+pylint = "==2.4.4"
 mypy = "*"
+beautifulsoup4 = "*"
+lxml = "*"
+coverage = "*"
+parameterized = "*"
 
 [pipenv]
 allow_prereleases = true
