@@ -3,7 +3,7 @@ load-plugins=pylint.extensions.broad_try_clause,pylint.extensions.emptystring,py
 init-hook="import sys; sys.path.append('/home/dino/workspace/venvs/Tagger-slwGYiQr/lib/python3.8/site-packages')"
 
 [MESSAGES CONTROL]
-disable=C0114,C0115,C0116,C0330
+disable=C0114,C0115,C0116
 
 [FORMAT]
 max-line-length=88

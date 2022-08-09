@@ -33,6 +33,7 @@ class Test(SimpleTestCase):
         with open(
             apps.get_app_config(urls.app_name).path + "/test/resources/TaggerDB.json",
             "rt",
+            encoding="utf-8",
         ) as ref_db_file:
             self.db_tmp_file.write(ref_db_file.read())
         self.db_tmp_file.close()
@@ -101,6 +102,7 @@ class Test(SimpleTestCase):
     )
     @unittest.mock.patch("pathtagger.views.MyPath", autospec=True)
     @unittest.mock.patch.object(views.db, "update_mapping")
+    # pylint: disable=R0913
     def test_mapping_details_post(
         self,
         _,
@@ -136,6 +138,7 @@ class Test(SimpleTestCase):
     )
     @unittest.mock.patch("pathtagger.views.MyPath", autospec=True)
     @unittest.mock.patch.object(views.db, "insert_mapping")
+    # pylint: disable=R0913
     def test_add_mapping(
         self,
         _,

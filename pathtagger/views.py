@@ -85,7 +85,8 @@ def _get_extended_dataset(dataset):
 
 def _get_drive_root_dirs():
     if os.name == "nt":
-        from ctypes import windll  # pylint: disable=C0415
+        # pylint: disable=C0415
+        from ctypes import windll
 
         bitfield = windll.kernel32.GetLogicalDrives()
         masks = [(1 << n, chr(ord("A") + n)) for n in range(ord("Z") - ord("A") + 1)]
