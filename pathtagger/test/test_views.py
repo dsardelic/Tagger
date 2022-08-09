@@ -1,5 +1,6 @@
 import os
 import unittest.mock
+from pathlib import Path
 from tempfile import NamedTemporaryFile
 
 from bs4 import BeautifulSoup
@@ -107,8 +108,8 @@ class Test(SimpleTestCase):  # pylint: disable=R0904
         mock_update_mapping,
         mock_mypath,
     ):
-        mock_mypath(new_db_path_str).is_allowed = is_allowed_path
-        mock_mypath(new_db_path_str).db_path_str = new_db_path_str
+        mock_mypath(new_db_path_str, False).is_allowed = is_allowed_path
+        mock_mypath(new_db_path_str, False).db_path_str = new_db_path_str
         mapping_id = 1
         response = self.client.post(
             reverse(
@@ -142,8 +143,8 @@ class Test(SimpleTestCase):  # pylint: disable=R0904
         mock_insert_mapping,
         mock_mypath,
     ):
-        mock_mypath(db_path_str).is_allowed = path_is_allowed
-        mock_mypath(db_path_str).db_path_str = db_path_str
+        mock_mypath(db_path_str, True).is_allowed = path_is_allowed
+        mock_mypath(db_path_str, True).db_path_str = db_path_str
         response = self.client.post(
             reverse(f"{urls.app_name}:add_mapping"), {"path": db_path_str}
         )
@@ -379,7 +380,14 @@ class Test(SimpleTestCase):  # pylint: disable=R0904
     def test_toggle_favorite_path(self):
         ...
 
-    @parameterized.expand([("no base path", None), ("with base path", "/home/dino")])
+    @parameterized.expand(
+        [
+            ("no base path", None),
+            ("empty base path", ""),
+            ("with existent base path", Path("/etc")),
+            ("with nonexistent base path", Path("/fictitious_folder")),
+        ]
+    )
     @unittest.skipUnless(os.name == "posix", "requires Posix")
     def test_root_path_redirect_posix(self, _, base_path):
         params.BASE_PATH = base_path
@@ -392,7 +400,13 @@ class Test(SimpleTestCase):  # pylint: disable=R0904
             ),
         )
 
-    @parameterized.expand([("no base path", None), ("with base path", r"C:\tools")])
+    @parameterized.expand(
+        [
+            ("no base path", None),
+            ("empty base path", ""),
+            ("with base path", r"C:\tools"),
+        ]
+    )
     @unittest.skipUnless(os.name == "nt", "requires Windows")
     def test_root_path_redirect_nt(self, _, base_path):
         params.BASE_PATH = base_path
