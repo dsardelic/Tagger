@@ -65,7 +65,7 @@ class MyPath:
         return self
 
 
-def _get_extended_dataset(dataset):
+def get_extended_dataset(dataset):
     for element in dataset:
         db_path_str = element["path"]
         db_path = Path(db_path_str)
@@ -83,10 +83,9 @@ def _get_extended_dataset(dataset):
     return dataset
 
 
-def _get_drive_root_dirs():
+def get_drive_root_dirs():
     if os.name == "nt":
-        # pylint: disable=C0415
-        from ctypes import windll
+        from ctypes import windll  # pylint: disable=C0415
 
         bitfield = windll.kernel32.GetLogicalDrives()
         masks = [(1 << n, chr(ord("A") + n)) for n in range(ord("Z") - ord("A") + 1)]
@@ -108,7 +107,7 @@ def mapping_details(request, mapping_id):
     return render(
         request,
         "pathtagger/mapping_details.html",
-        {"mapping": _get_extended_dataset([db.get_mapping(mapping_id)]).pop()},
+        {"mapping": get_extended_dataset([db.get_mapping(mapping_id)]).pop()},
     )
 
 
@@ -176,7 +175,7 @@ def mappings_list(request):
     ]
     path_name_like = request.GET.get("path_name_like", "")
     path_type = request.GET.get("path_type", "all")
-    mappings = _get_extended_dataset(
+    mappings = get_extended_dataset(
         db.get_filtered_mappings(tag_ids_to_include, tag_ids_to_exclude, path_name_like)
     )
     if path_type == "existent":
@@ -214,7 +213,7 @@ def tag_details(request, tag_id):
         "pathtagger/tag_details.html",
         {
             "tag": db.get_tag_by_id(tag_id),
-            "mappings": _get_extended_dataset(db.get_tag_mappings(tag_id)),
+            "mappings": get_extended_dataset(db.get_tag_mappings(tag_id)),
         },
     )
 
@@ -293,7 +292,7 @@ def path_details(request, path_str):
             "path_tokens": path_tokens,
             "path_children": path_children,
             "tags": db.get_all_tags(),
-            "drive_root_dirs": _get_drive_root_dirs(),
+            "drive_root_dirs": get_drive_root_dirs(),
             "is_tagging_allowed": MyPath(path).is_allowed,
         },
     )
@@ -350,5 +349,5 @@ def homepage(request):
     return render(
         request,
         "pathtagger/homepage.html",
-        {"favorite_paths": _get_extended_dataset(db.get_all_favorite_paths())},
+        {"favorite_paths": get_extended_dataset(db.get_all_favorite_paths())},
     )

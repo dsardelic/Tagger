@@ -1,6 +1,6 @@
 import os
-import tempfile
 import unittest.mock
+from tempfile import NamedTemporaryFile
 
 from bs4 import BeautifulSoup
 from django.apps import apps
@@ -25,30 +25,27 @@ def _row_count(soup, element_id):
     return len(soup.select_one(f"#{element_id}").find_all("tr"))
 
 
-# pylint: disable=R0904
-class Test(SimpleTestCase):
+class Test(SimpleTestCase):  # pylint: disable=R0904
     def setUp(self):
         self.client = Client()
-        self.db_tmp_file = tempfile.NamedTemporaryFile(mode="wt", delete=False)
-        with open(
-            apps.get_app_config(urls.app_name).path + "/test/resources/TaggerDB.json",
-            "rt",
-            encoding="utf-8",
-        ) as ref_db_file:
-            self.db_tmp_file.write(ref_db_file.read())
-        self.db_tmp_file.close()
-        db_operations.DB = db_operations.load_db(self.db_tmp_file.name)
-        params.DB_PATH = self.db_tmp_file.name
+        test_db_path_str = (
+            apps.get_app_config(urls.app_name).path + "/test/resources/TaggerDB.json"
+        )
+        with NamedTemporaryFile(mode="wt", delete=False) as db_tmp_file:
+            with open(test_db_path_str, "rt", encoding="utf-8") as ref_db_file:
+                self.db_tmp_file_name = db_tmp_file.name
+                db_tmp_file.write(ref_db_file.read())
+        db_operations.DB = db_operations.load_db(self.db_tmp_file_name)
+        params.DB_PATH = self.db_tmp_file_name
         params.BASE_PATH = None
         params.DEFAULT_TAG_COLOR = "#d9d9d9"
 
     def tearDown(self):
-        os.remove(self.db_tmp_file.name)
+        os.remove(self.db_tmp_file_name)
 
-    # pylint: disable=W0212
-    def test__get_extended_dataset(self):
+    def test_get_extended_dataset(self):
         docs = db_operations.get_all_mappings()
-        extended_dataset = views._get_extended_dataset(docs)
+        extended_dataset = views.get_extended_dataset(docs)
         self.assertTrue(len(extended_dataset) == 5)
         self.assertTrue(
             all(
@@ -67,15 +64,14 @@ class Test(SimpleTestCase):
             ["tags" in doc for doc in docs], [True, True, True, True, True]
         )
 
-    # pylint: disable=W0212
-    def test__get_drive_root_dirs(self):
+    def test_get_drive_root_dirs(self):
         if os.name == "nt":
             self.assertIn(
                 {"path_str": "C:/", "system_path_str": "C:\\"},
-                views._get_drive_root_dirs(),
+                views.get_drive_root_dirs(),
             )
         else:
-            self.assertEqual(views._get_drive_root_dirs(), [])
+            self.assertEqual(views.get_drive_root_dirs(), [])
 
     def test_mapping_details_get(self):
         response = self.client.get(
@@ -102,8 +98,7 @@ class Test(SimpleTestCase):
     )
     @unittest.mock.patch("pathtagger.views.MyPath", autospec=True)
     @unittest.mock.patch.object(views.db, "update_mapping")
-    # pylint: disable=R0913
-    def test_mapping_details_post(
+    def test_mapping_details_post(  # pylint: disable=R0913
         self,
         _,
         new_db_path_str,
@@ -138,8 +133,7 @@ class Test(SimpleTestCase):
     )
     @unittest.mock.patch("pathtagger.views.MyPath", autospec=True)
     @unittest.mock.patch.object(views.db, "insert_mapping")
-    # pylint: disable=R0913
-    def test_add_mapping(
+    def test_add_mapping(  # pylint: disable=R0913
         self,
         _,
         db_path_str,
