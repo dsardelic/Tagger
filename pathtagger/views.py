@@ -1,5 +1,5 @@
 import os
-from pathlib import Path
+from pathlib import Path, PosixPath
 from typing import List, Tuple, Union
 from unittest.mock import sentinel
 from urllib.parse import quote
@@ -18,20 +18,20 @@ class MyPath:
         self.db_path_str = (
             type(self).to_db_path_str(path)
             if is_abs_path
-            else type(self).format_solidi(path)
+            else type(self).to_formatted_posix_path(path)
         )
+
+    @property
+    def system_db_path_str(self) -> str:
+        if self.db_path == self.INVALID_PATH:
+            return self.INVALID_PATH
+        return str(self.db_path)
 
     @property
     def db_path(self) -> Path:
         if self.db_path_str == self.INVALID_PATH:
             return self.INVALID_PATH
         return Path(self.db_path_str)
-
-    @property
-    def system_db_path_str(self) -> str:
-        if self.db_path_str == self.INVALID_PATH:
-            return self.INVALID_PATH
-        return str(self.db_path)
 
     @property
     def abs_path_str(self) -> str:
@@ -46,20 +46,20 @@ class MyPath:
         return self.db_path_str
 
     @property
-    def abs_path(self) -> Path:
-        if self.db_path_str == self.INVALID_PATH:
-            return self.INVALID_PATH
-        return Path(self.abs_path_str)
-
-    @property
     def system_abs_path_str(self) -> str:
-        if self.db_path_str == self.INVALID_PATH:
+        if self.abs_path == self.INVALID_PATH:
             return self.INVALID_PATH
         return str(self.abs_path)
 
     @property
-    def is_allowed(self) -> bool:
-        return self.db_path_str != self.INVALID_PATH and (
+    def abs_path(self) -> Path:
+        if self.abs_path_str == self.INVALID_PATH:
+            return self.INVALID_PATH
+        return Path(self.abs_path_str)
+
+    @property
+    def is_allowed_db_path(self) -> bool:
+        return self.abs_path != self.INVALID_PATH and (
             not params.BASE_PATH
             or self.abs_path == params.BASE_PATH
             or params.BASE_PATH in self.abs_path.parents
@@ -67,7 +67,7 @@ class MyPath:
 
     @staticmethod
     def to_db_path_str(abs_path_str: str) -> str:
-        abs_path = Path(abs_path_str)
+        abs_path = Path(MyPath.to_formatted_posix_path(abs_path_str))
         if not params.BASE_PATH:
             return abs_path.as_posix()
         if abs_path == params.BASE_PATH:
@@ -77,17 +77,20 @@ class MyPath:
         return abs_path.as_posix()
 
     @staticmethod
-    def format_solidi(raw_input: Union[Path, str]) -> str:
-        if Path(raw_input).as_posix() == ".":
+    def to_formatted_posix_path(raw_path: Union[Path, str]) -> str:
+        raw_path = Path(raw_path)
+        if raw_path.as_posix() == ".":
             return MyPath.INVALID_PATH
-        return "/" + Path(raw_input).as_posix().strip("/")
+        if isinstance(raw_path, PosixPath):
+            return "/" + raw_path.as_posix().strip("/")
+        return MyPath(raw_path, True).abs_path_str
 
 
 def get_extended_dataset(dataset):
     for element in dataset:
         db_path_str = element["path"]
         db_path = Path(db_path_str)
-        mypath = MyPath(db_path_str, False)
+        mypath = MyPath(db_path_str, True)
         element["path_str"] = mypath.abs_path_str
         element["system_path_str"] = mypath.system_abs_path_str
         element["db_path_str"] = db_path.as_posix()
@@ -118,7 +121,7 @@ def get_drive_root_dirs():
 def mapping_details(request, mapping_id):
     if request.method == "POST":
         mypath = MyPath(request.POST.get("path", None), False)
-        if mypath.is_allowed:
+        if mypath.is_allowed_db_path:
             db.update_mapping(mapping_id, mypath.db_path_str)
         return redirect("pathtagger:mappings_list")
     return render(
@@ -130,7 +133,7 @@ def mapping_details(request, mapping_id):
 
 def add_mapping(request):
     mypath = MyPath(request.POST.get("path", None), True)
-    if mypath.is_allowed and not db.get_mapping_by_path(mypath.db_path_str):
+    if mypath.is_allowed_db_path and not db.get_mapping_by_path(mypath.db_path_str):
         db.insert_mapping(mypath.db_path_str, [])
     return redirect("pathtagger:mappings_list")
 
@@ -311,7 +314,7 @@ def path_details(request, path_str):
             "path_children": path_children,
             "tags": db.get_all_tags(),
             "drive_root_dirs": get_drive_root_dirs(),
-            "is_tagging_allowed": MyPath(path, True).is_allowed,
+            "is_tagging_allowed": MyPath(path, True).is_allowed_db_path,
         },
     )
 
@@ -338,7 +341,7 @@ def edit_path_tags(request):
 
 def toggle_favorite_path(request):
     mypath = MyPath(request.POST.get("path", None), True)
-    if mypath.is_allowed:
+    if mypath.is_allowed_db_path:
         if not db.get_favorite_path(mypath.db_path_str):
             db.insert_favorite_path(mypath.db_path_str)
             is_favorite = True

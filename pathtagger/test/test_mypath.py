@@ -294,7 +294,7 @@ class TestMyPath(unittest.TestCase):
                 self.assertEqual(mypath.abs_path_str, exp_abs_path_str)
                 self.assertEqual(mypath.abs_path, exp_abs_path)
                 self.assertEqual(mypath.system_abs_path_str, exp_system_abs_path_str)
-                self.assertEqual(mypath.is_allowed, exp_is_allowed)
+                self.assertEqual(mypath.is_allowed_db_path, exp_is_allowed)
 
                 mypath = MyPath(Path(path), is_abs_path)
                 self.assertEqual(mypath.db_path_str, exp_db_path_str)
@@ -303,7 +303,7 @@ class TestMyPath(unittest.TestCase):
                 self.assertEqual(mypath.abs_path_str, exp_abs_path_str)
                 self.assertEqual(mypath.abs_path, exp_abs_path)
                 self.assertEqual(mypath.system_abs_path_str, exp_system_abs_path_str)
-                self.assertEqual(mypath.is_allowed, exp_is_allowed)
+                self.assertEqual(mypath.is_allowed_db_path, exp_is_allowed)
 
     @unittest.skipUnless(os.name == "posix", "requires Posix")
     def test_is_allowed_path_posix(self):

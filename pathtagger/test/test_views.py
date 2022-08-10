@@ -12,6 +12,7 @@ from django.urls.base import reverse
 from parameterized import parameterized
 
 from pathtagger import db_operations, urls, views
+from pathtagger.views import MyPath
 from Tagger import params, settings
 
 
@@ -108,7 +109,7 @@ class Test(SimpleTestCase):  # pylint: disable=R0904
         mock_update_mapping,
         mock_mypath,
     ):
-        mock_mypath(new_db_path_str, False).is_allowed = is_allowed_path
+        mock_mypath(new_db_path_str, False).is_allowed_db_path = is_allowed_path
         mock_mypath(new_db_path_str, False).db_path_str = new_db_path_str
         mapping_id = 1
         response = self.client.post(
@@ -143,7 +144,7 @@ class Test(SimpleTestCase):  # pylint: disable=R0904
         mock_insert_mapping,
         mock_mypath,
     ):
-        mock_mypath(db_path_str, True).is_allowed = path_is_allowed
+        mock_mypath(db_path_str, True).is_allowed_db_path = path_is_allowed
         mock_mypath(db_path_str, True).db_path_str = db_path_str
         response = self.client.post(
             reverse(f"{urls.app_name}:add_mapping"), {"path": db_path_str}
@@ -383,7 +384,6 @@ class Test(SimpleTestCase):  # pylint: disable=R0904
     @parameterized.expand(
         [
             ("no base path", None),
-            ("empty base path", ""),
             ("with existent base path", Path("/etc")),
             ("with nonexistent base path", Path("/fictitious_folder")),
         ]
@@ -396,15 +396,19 @@ class Test(SimpleTestCase):  # pylint: disable=R0904
             response,
             reverse(
                 f"{urls.app_name}:path_details",
-                kwargs={"path_str": base_path if base_path else "/"},
+                kwargs={
+                    "path_str": MyPath(base_path, True).abs_path_str
+                    if base_path
+                    else "/"
+                },
             ),
         )
 
     @parameterized.expand(
         [
             ("no base path", None),
-            ("empty base path", ""),
-            ("with base path", r"C:\tools"),
+            ("with existent base path", r"C:\Windows"),
+            ("with nonexistent base path", Path(r"C:\fictitious_folder")),
         ]
     )
     @unittest.skipUnless(os.name == "nt", "requires Windows")
