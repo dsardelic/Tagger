@@ -397,7 +397,7 @@ class Test(SimpleTestCase):  # pylint: disable=R0904
             reverse(
                 f"{urls.app_name}:path_details",
                 kwargs={
-                    "path_str": MyPath(base_path, True).abs_path_str
+                    "abs_path_str": MyPath(base_path, True).abs_path_str
                     if base_path
                     else "/"
                 },
@@ -419,7 +419,9 @@ class Test(SimpleTestCase):  # pylint: disable=R0904
             response,
             reverse(
                 f"{urls.app_name}:path_details",
-                kwargs={"path_str": base_path if base_path else settings.BASE_DIR[:3]},
+                kwargs={
+                    "abs_path_str": base_path if base_path else settings.BASE_DIR[:3]
+                },
             ),
         )
 

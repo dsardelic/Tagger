@@ -38,7 +38,7 @@
         {% endif %}
         PATH DETAILS:&nbsp;
         {% for path_token in path_tokens %}
-            <a href="{% url 'pathtagger:path_details' path_str=path_token.path_str %}">{{ path_token.name }}</a>{% if not forloop.last %} > {% endif %}
+            <a href="{% url 'pathtagger:path_details' abs_path_str=path_token.path_str %}">{{ path_token.name }}</a>{% if not forloop.last %} > {% endif %}
         {% endfor %}
     {% else %}
         PATH DETAILS: {{ system_path_str }}
@@ -51,7 +51,7 @@
             <div style="margin-bottom:20px;display:flow-root;">
                 <div class="left" style="margin-right:20px;">
                     {% if not is_root_path %}
-                        <a href="{% url 'pathtagger:path_details' path_str=path_parent %}">&#x21A9; View parent details</a>
+                        <a href="{% url 'pathtagger:path_details' abs_path_str=path_parent %}">&#x21A9; View parent details</a>
                     {% else %}
                         &nbsp;
                     {% endif %}
@@ -61,7 +61,7 @@
                         <select id="driveSelector" onchange="window.location.href = document.getElementById('driveSelector').value;">
                             <option value="#" selected>Select drive</option>
                             {% for drive_root_dir in drive_root_dirs %}
-                                <option value="{% url 'pathtagger:path_details' path_str=drive_root_dir.path_str %}">{{ drive_root_dir.system_path_str }}</option>
+                                <option value="{% url 'pathtagger:path_details' abs_path_str=drive_root_dir.path_str %}">{{ drive_root_dir.system_path_str }}</option>
                             {% endfor %}
                         </select>
                     </div>
@@ -84,7 +84,7 @@
                             </td>
                             <td style="text-align:left;">
                                 {% if child.is_dir %}
-                                    <a href="{% url 'pathtagger:path_details' path_str=child.path_str %}">{{ child.name }}</a>
+                                    <a href="{% url 'pathtagger:path_details' abs_path_str=child.path_str %}">{{ child.name }}</a>
                                 {% else %}
                                     {{ child.name }}
                                 {% endif %}

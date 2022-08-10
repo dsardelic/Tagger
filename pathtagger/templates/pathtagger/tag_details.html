@@ -54,7 +54,7 @@
 	                        </td>
 	                        <td {% if not mapping.path_exists %} class="nonexistent-path" title="Nonexistent path" {% endif %} style="text-align:left;">
 	                            {% if mapping.path_is_dir %}
-	                                <a href="{% url 'pathtagger:path_details' path_str=mapping.path_str %}">{{ mapping.system_path_str }}</a>
+	                                <a href="{% url 'pathtagger:path_details' abs_path_str=mapping.path_str %}">{{ mapping.system_path_str }}</a>
 	                            {% else %}
 	                                {{ mapping.system_path_str }}
 	                            {% endif %}

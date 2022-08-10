@@ -19,7 +19,7 @@ urlpatterns = [
         views.remove_tag_from_mappings,
         name="remove_tag_from_mappings",
     ),
-    path("path/<path:path_str>", views.path_details, name="path_details"),
+    path("path/<path:abs_path_str>", views.path_details, name="path_details"),
     path("pathtagsedit/", views.edit_path_tags, name="edit_path_tags"),
     path(
         "togglefavoritepath/", views.toggle_favorite_path, name="toggle_favorite_path"

@@ -74,7 +74,7 @@ class MyPath:
             return "/"
         if params.BASE_PATH in abs_path.parents:
             return "/" + "/".join(abs_path.parts[len(params.BASE_PATH.parts) :])
-        return abs_path.as_posix()
+        return MyPath.INVALID_PATH
 
     @staticmethod
     def to_formatted_posix_path(raw_path: Union[Path, str]) -> str:
@@ -266,8 +266,8 @@ def remove_tag_from_mappings(request):
     return tag_details(request, tag_id)
 
 
-def path_details(request, path_str):
-    path = Path(path_str)
+def path_details(request, abs_path_str):
+    path = Path(abs_path_str)
     path_tokens = []
     path_children = []
     if path.exists():
@@ -301,9 +301,9 @@ def path_details(request, path_str):
         request,
         "pathtagger/path_details.html",
         {
-            "path_str": path_str,
+            "path_str": abs_path_str,
             "system_path_str": str(path),
-            "ajax_path_str": quote(path_str),
+            "ajax_path_str": quote(abs_path_str),
             "is_root_path": path.anchor == str(path),
             "path_exists": path.exists(),
             "path_is_favorite": bool(
@@ -358,7 +358,7 @@ def root_path_redirect(_):
         params.BASE_PATH if params.BASE_PATH else Path(Path(settings.BASE_DIR).anchor),
         True,
     )
-    return redirect("pathtagger:path_details", path_str=root_path.abs_path_str)
+    return redirect("pathtagger:path_details", abs_path_str=root_path.abs_path_str)
 
 
 def homepage(request):

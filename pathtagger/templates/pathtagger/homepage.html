@@ -18,7 +18,7 @@
 	                    <tr>
 	                        <td {% if not favorite_path.path_exists %} class="nonexistent-path" title="Nonexistent path" {% endif %} style="text-align:left;">
 	                            {% if favorite_path.path_is_dir %}
-	                                <a href="{% url 'pathtagger:path_details' path_str=favorite_path.path_str %}">{{ favorite_path.system_path_str }}</a>
+	                                <a href="{% url 'pathtagger:path_details' abs_path_str=favorite_path.path_str %}">{{ favorite_path.system_path_str }}</a>
 	                            {% else %}
 	                                {{ favorite_path.system_path_str }}
 	                            {% endif %}
