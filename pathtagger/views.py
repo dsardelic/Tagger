@@ -1,7 +1,6 @@
 import os
 from pathlib import Path, PosixPath
 from typing import List, Tuple, Union
-from unittest.mock import sentinel
 from urllib.parse import quote
 
 from django.http import JsonResponse
@@ -12,75 +11,59 @@ from Tagger import params, settings
 
 
 class MyPath:
-    INVALID_PATH = sentinel.INVALID_PATH
+    def __init__(self, raw_path: Union[Path, str], is_abs_path: bool):
+        self.raw_path = raw_path
+        if is_abs_path or not params.BASE_PATH:
+            self.abs_path_str = type(self)._to_formatted_posix_path(raw_path)
+        else:
+            self.abs_path_str = params.BASE_PATH.joinpath(
+                type(self)._to_formatted_posix_path(raw_path).strip("/")
+            ).as_posix()
 
-    def __init__(self, path: Union[Path, str], is_abs_path: bool):
-        self.db_path_str = (
-            type(self).to_db_path_str(path)
-            if is_abs_path
-            else type(self).to_formatted_posix_path(path)
-        )
+    @property
+    def db_path_str(self):
+        return type(self)._to_db_path_str(self.abs_path_str)
 
     @property
     def system_db_path_str(self) -> str:
-        if self.db_path == self.INVALID_PATH:
-            return self.INVALID_PATH
         return str(self.db_path)
 
     @property
     def db_path(self) -> Path:
-        if self.db_path_str == self.INVALID_PATH:
-            return self.INVALID_PATH
         return Path(self.db_path_str)
 
     @property
-    def abs_path_str(self) -> str:
-        if self.db_path_str == self.INVALID_PATH:
-            return self.INVALID_PATH
-        if params.BASE_PATH:
-            return (
-                params.BASE_PATH.as_posix()
-                if self.db_path_str == "/"
-                else params.BASE_PATH.joinpath(self.db_path_str.strip("/")).as_posix()
-            )
-        return self.db_path_str
-
-    @property
     def system_abs_path_str(self) -> str:
-        if self.abs_path == self.INVALID_PATH:
-            return self.INVALID_PATH
         return str(self.abs_path)
 
     @property
     def abs_path(self) -> Path:
-        if self.abs_path_str == self.INVALID_PATH:
-            return self.INVALID_PATH
         return Path(self.abs_path_str)
 
     @property
-    def is_allowed_db_path(self) -> bool:
-        return self.abs_path != self.INVALID_PATH and (
+    def abs_path_is_taggable(self) -> bool:
+        return self.abs_path_str != "." and (
             not params.BASE_PATH
             or self.abs_path == params.BASE_PATH
             or params.BASE_PATH in self.abs_path.parents
         )
 
     @staticmethod
-    def to_db_path_str(abs_path_str: str) -> str:
-        abs_path = Path(MyPath.to_formatted_posix_path(abs_path_str))
+    def _to_db_path_str(abs_path_str: str) -> str:
+        abs_path = Path(MyPath._to_formatted_posix_path(abs_path_str))
         if not params.BASE_PATH:
             return abs_path.as_posix()
         if abs_path == params.BASE_PATH:
             return "/"
         if params.BASE_PATH in abs_path.parents:
             return "/" + "/".join(abs_path.parts[len(params.BASE_PATH.parts) :])
-        return MyPath.INVALID_PATH
+        return "."
 
     @staticmethod
-    def to_formatted_posix_path(raw_path: Union[Path, str]) -> str:
+    def _to_formatted_posix_path(raw_path: Union[Path, str]) -> str:
         raw_path = Path(raw_path)
         if raw_path.as_posix() == ".":
-            return MyPath.INVALID_PATH
+            return "."
         if isinstance(raw_path, PosixPath):
             return "/" + raw_path.as_posix().strip("/")
         return MyPath(raw_path, True).abs_path_str
@@ -88,12 +71,10 @@ class MyPath:
 
 def get_extended_dataset(dataset):
     for element in dataset:
-        db_path_str = element["path"]
-        db_path = Path(db_path_str)
-        mypath = MyPath(db_path_str, True)
+        mypath = MyPath(element["path"], False)
         element["path_str"] = mypath.abs_path_str
         element["system_path_str"] = mypath.system_abs_path_str
-        element["db_path_str"] = db_path.as_posix()
+        element["db_path_str"] = mypath.db_path_str
         element["path_exists"] = mypath.abs_path.exists()
         element["path_is_dir"] = mypath.abs_path.is_dir()
         if element.get("tag_ids", []):
@@ -121,8 +102,7 @@ def get_drive_root_dirs():
 def mapping_details(request, mapping_id):
     if request.method == "POST":
         mypath = MyPath(request.POST.get("path", None), False)
-        if mypath.is_allowed_db_path:
-            db.update_mapping(mapping_id, mypath.db_path_str)
+        db.update_mapping(mapping_id, mypath.db_path_str)
         return redirect("pathtagger:mappings_list")
     return render(
         request,
@@ -133,7 +113,7 @@ def mapping_details(request, mapping_id):
 
 def add_mapping(request):
     mypath = MyPath(request.POST.get("path", None), True)
-    if mypath.is_allowed_db_path and not db.get_mapping_by_path(mypath.db_path_str):
+    if mypath.abs_path_is_taggable and not db.get_mapping_by_path(mypath.db_path_str):
         db.insert_mapping(mypath.db_path_str, [])
     return redirect("pathtagger:mappings_list")
 
@@ -314,7 +294,7 @@ def path_details(request, abs_path_str):
             "path_children": path_children,
             "tags": db.get_all_tags(),
             "drive_root_dirs": get_drive_root_dirs(),
-            "is_tagging_allowed": MyPath(path, True).is_allowed_db_path,
+            "is_tagging_allowed": MyPath(path, True).abs_path_is_taggable,
         },
     )
 
@@ -341,15 +321,14 @@ def edit_path_tags(request):
 
 def toggle_favorite_path(request):
     mypath = MyPath(request.POST.get("path", None), True)
-    if mypath.is_allowed_db_path:
-        if not db.get_favorite_path(mypath.db_path_str):
-            db.insert_favorite_path(mypath.db_path_str)
-            is_favorite = True
-        else:
-            db.delete_favorite_path(mypath.db_path_str)
-            is_favorite = False
-        if request.is_ajax():
-            return JsonResponse({"status": "ok", "is_favorite": str(bool(is_favorite))})
+    if not db.get_favorite_path(mypath.db_path_str):
+        db.insert_favorite_path(mypath.db_path_str)
+        is_favorite = True
+    else:
+        db.delete_favorite_path(mypath.db_path_str)
+        is_favorite = False
+    if request.is_ajax():
+        return JsonResponse({"status": "ok", "is_favorite": str(bool(is_favorite))})
     return redirect("pathtagger:homepage")
 
 

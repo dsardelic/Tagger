@@ -92,37 +92,31 @@ class Test(SimpleTestCase):  # pylint: disable=R0904
         )
 
     @parameterized.expand(
-        [
-            ("path missing", "", False, False),
-            ("path not allowed", "new_path_str", False, False),
-            ("path allowed", "new_path_str", True, True),
-        ]
+        [("path missing", ""), ("path not missing", "new_db_path_str")]
     )
-    @unittest.mock.patch("pathtagger.views.MyPath", autospec=True)
+    @unittest.mock.patch("pathtagger.views.MyPath")
     @unittest.mock.patch.object(views.db, "update_mapping")
     def test_mapping_details_post(  # pylint: disable=R0913
         self,
         _,
         new_db_path_str,
-        is_allowed_path,
-        exp_update_mapping_called,
         mock_update_mapping,
         mock_mypath,
     ):
-        mock_mypath(new_db_path_str, False).is_allowed_db_path = is_allowed_path
         mock_mypath(new_db_path_str, False).db_path_str = new_db_path_str
-        mapping_id = 1
+        mapping_id = int()
         response = self.client.post(
             reverse(
                 f"{urls.app_name}:mapping_details", kwargs={"mapping_id": mapping_id}
             ),
             {"path": new_db_path_str},
         )
-        self.assertRedirects(response, reverse(f"{urls.app_name}:mappings_list"))
-        if exp_update_mapping_called:
-            mock_update_mapping.assert_called_once_with(mapping_id, new_db_path_str)
-        else:
-            mock_update_mapping.assert_not_called()
+        self.assertRedirects(
+            response,
+            reverse(f"{urls.app_name}:mappings_list"),
+            fetch_redirect_response=False,
+        )
+        mock_update_mapping.assert_called_once_with(mapping_id, new_db_path_str)
 
     @parameterized.expand(
         [
@@ -144,12 +138,16 @@ class Test(SimpleTestCase):  # pylint: disable=R0904
         mock_insert_mapping,
         mock_mypath,
     ):
-        mock_mypath(db_path_str, True).is_allowed_db_path = path_is_allowed
+        mock_mypath(db_path_str, True).abs_path_is_taggable = path_is_allowed
         mock_mypath(db_path_str, True).db_path_str = db_path_str
         response = self.client.post(
             reverse(f"{urls.app_name}:add_mapping"), {"path": db_path_str}
         )
-        self.assertRedirects(response, reverse(f"{urls.app_name}:mappings_list"))
+        self.assertRedirects(
+            response,
+            reverse(f"{urls.app_name}:mappings_list"),
+            fetch_redirect_response=False,
+        )
         if exp_insert_mapping_called:
             mock_insert_mapping.assert_called_once_with(db_path_str, [])
         else:

@@ -114,10 +114,8 @@ def delete_mappings(mapping_ids: List[int]):
     DB.remove(doc_ids=mapping_ids)
 
 
-def update_mapping(mapping_id: int, path: str, tag_ids: Optional[List[int]] = None):
-    if tag_ids:
-        DB.update({"path": path, "tag_ids": tag_ids}, doc_ids=[mapping_id])
-    else:
+def update_mapping(mapping_id: int, path: str):
+    if path:
         DB.update({"path": path}, doc_ids=[mapping_id])
 
 
