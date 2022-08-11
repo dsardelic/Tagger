@@ -11,18 +11,37 @@ from Tagger import params, settings
 
 
 class MyPath:
+
+    INVALID_PATH_STR: str = "."
+
+    @staticmethod
+    def _to_formatted_posix_path_str(path: Union[Path, str]) -> str:
+        path = Path(path)
+        if path.as_posix() == MyPath.INVALID_PATH_STR:
+            return MyPath.INVALID_PATH_STR
+        if isinstance(path, PosixPath):
+            return "/" + path.as_posix().strip("/")
+        return MyPath(path, True).abs_path_str
+
     def __init__(self, raw_path: Union[Path, str], is_abs_path: bool):
         self.raw_path = raw_path
         if is_abs_path or not params.BASE_PATH:
-            self.abs_path_str = type(self)._to_formatted_posix_path(raw_path)
+            self.abs_path_str = self._to_formatted_posix_path_str(raw_path)
         else:
             self.abs_path_str = params.BASE_PATH.joinpath(
-                type(self)._to_formatted_posix_path(raw_path).strip("/")
+                self._to_formatted_posix_path_str(raw_path).lstrip("/")
             ).as_posix()
 
     @property
-    def db_path_str(self):
-        return type(self)._to_db_path_str(self.abs_path_str)
+    def db_path_str(self) -> str:
+        abs_path = Path(self._to_formatted_posix_path_str(self.abs_path_str))
+        if not params.BASE_PATH:
+            return abs_path.as_posix()
+        if abs_path == params.BASE_PATH:
+            return "/"
+        if params.BASE_PATH in abs_path.parents:
+            return "/" + "/".join(abs_path.parts[len(params.BASE_PATH.parts) :])
+        return self.INVALID_PATH_STR
 
     @property
     def system_db_path_str(self) -> str:
@@ -40,33 +59,15 @@ class MyPath:
     def abs_path(self) -> Path:
         return Path(self.abs_path_str)
 
-    @property
-    def abs_path_is_taggable(self) -> bool:
-        return self.abs_path_str != "." and (
+    def is_taggable(self) -> bool:
+        return self.abs_path_str != self.INVALID_PATH_STR and (
             not params.BASE_PATH
             or self.abs_path == params.BASE_PATH
             or params.BASE_PATH in self.abs_path.parents
         )
 
-    @staticmethod
-    def _to_db_path_str(abs_path_str: str) -> str:
-        abs_path = Path(MyPath._to_formatted_posix_path(abs_path_str))
-        if not params.BASE_PATH:
-            return abs_path.as_posix()
-        if abs_path == params.BASE_PATH:
-            return "/"
-        if params.BASE_PATH in abs_path.parents:
-            return "/" + "/".join(abs_path.parts[len(params.BASE_PATH.parts) :])
-        return "."
-
-    @staticmethod
-    def _to_formatted_posix_path(path: Union[Path, str]) -> str:
-        path = Path(path)
-        if path.as_posix() == ".":
-            return "."
-        if isinstance(path, PosixPath):
-            return "/" + path.as_posix().strip("/")
-        return MyPath(path, True).abs_path_str
+    def db_path_str_is_valid(self):
+        return self.db_path_str and self.db_path_str != self.INVALID_PATH_STR
 
 
 def get_extended_dataset(dataset):
@@ -101,8 +102,9 @@ def get_drive_root_dirs():
 
 def mapping_details(request, mapping_id):
     if request.method == "POST":
-        mypath = MyPath(request.POST.get("path", None), False)
-        db.update_mapping(mapping_id, mypath.db_path_str)
+        mypath = MyPath(request.POST.get("path", ""), False)
+        if mypath.db_path_str_is_valid():
+            db.update_mapping(mapping_id, mypath.db_path_str)
         return redirect("pathtagger:mappings_list")
     return render(
         request,
@@ -112,8 +114,8 @@ def mapping_details(request, mapping_id):
 
 
 def add_mapping(request):
-    mypath = MyPath(request.POST.get("path", None), True)
-    if mypath.abs_path_is_taggable and not db.get_mapping_by_path(mypath.db_path_str):
+    mypath = MyPath(request.POST.get("path", ""), True)
+    if mypath.db_path_str_is_valid() and not db.get_mapping_by_path(mypath.db_path_str):
         db.insert_mapping(mypath.db_path_str, [])
     return redirect("pathtagger:mappings_list")
 
@@ -154,15 +156,14 @@ def edit_mappings(request):
             tag_ids_to_append.extend(create_tags(request.POST.get("new_tag_names", "")))
             db.append_tags_to_mappings(tag_ids_to_append, mapping_ids)
             db.remove_tags_from_mappings(tag_ids_to_remove, mapping_ids)
-    request.method = "GET"
-    return mappings_list(request)
+    return redirect("pathtagger:mappings_list")
 
 
 def delete_mappings(request):
     db.delete_mappings(
         [int(mapping_id) for mapping_id in request.POST.getlist("mapping_id", [])]
     )
-    return mappings_list(request)
+    return redirect("pathtagger:mappings_list")
 
 
 def mappings_list(request):
@@ -200,13 +201,11 @@ def mappings_list(request):
 
 def tag_details(request, tag_id):
     if request.method == "POST":
-        db.update_tag(
-            tag_id,
-            request.POST.get("name", ""),
-            request.POST.get("color", params.DEFAULT_TAG_COLOR),
-        )
-        request.method = "GET"
-        return tag_details(request, tag_id)
+        name = request.POST.get("name", "")
+        color = request.POST.get("color", params.DEFAULT_TAG_COLOR)
+        if name and color and not db.get_tag_by_name(name):
+            db.update_tag(tag_id, name, color)
+        return redirect("pathtagger:tags_list")
     return render(
         request,
         "pathtagger/tag_details.html",
@@ -219,14 +218,15 @@ def tag_details(request, tag_id):
 
 def add_tag(request):
     name = request.POST.get("name", "")
-    if name and not db.get_tag_by_name(name):
-        db.insert_tag(name, request.POST.get("color", params.DEFAULT_TAG_COLOR))
-    return tags_list(request)
+    color = request.POST.get("color", params.DEFAULT_TAG_COLOR)
+    if name and color and not db.get_tag_by_name(name):
+        db.insert_tag(name, color)
+    return redirect("pathtagger:tags_list")
 
 
 def delete_tags(request):
     db.delete_tags([int(tag_id) for tag_id in request.POST.getlist("tag_id", [])])
-    return tags_list(request)
+    return redirect("pathtagger:tags_list")
 
 
 def tags_list(request):
@@ -242,8 +242,7 @@ def remove_tag_from_mappings(request):
         [tag_id],
         [int(mapping_id) for mapping_id in request.POST.getlist("mapping_id", [])],
     )
-    request.method = "GET"
-    return tag_details(request, tag_id)
+    return redirect("pathtagger:tag_details", tag_id=tag_id)
 
 
 def path_details(request, abs_path_str):
@@ -294,7 +293,7 @@ def path_details(request, abs_path_str):
             "path_children": path_children,
             "tags": db.get_all_tags(),
             "drive_root_dirs": get_drive_root_dirs(),
-            "is_tagging_allowed": MyPath(path, True).abs_path_is_taggable,
+            "is_tagging_allowed": MyPath(path, True).is_taggable(),
         },
     )
 

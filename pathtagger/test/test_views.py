@@ -27,7 +27,8 @@ def _row_count(soup, element_id):
     return len(soup.select_one(f"#{element_id}").find_all("tr"))
 
 
-class Test(SimpleTestCase):  # pylint: disable=R0904
+# pylint: disable=R0913,R0904
+class Test(SimpleTestCase):
     def setUp(self):
         self.client = Client()
         test_db_path_str = (
@@ -92,62 +93,47 @@ class Test(SimpleTestCase):  # pylint: disable=R0904
         )
 
     @parameterized.expand(
-        [("path missing", ""), ("path not missing", "new_db_path_str")]
+        [("path missing", "", 0), ("path not missing", "/new_db_path_str", 1)]
     )
-    @unittest.mock.patch("pathtagger.views.MyPath")
     @unittest.mock.patch.object(views.db, "update_mapping")
-    def test_mapping_details_post(  # pylint: disable=R0913
-        self,
-        _,
-        new_db_path_str,
-        mock_update_mapping,
-        mock_mypath,
+    def test_mapping_details_post(
+        self, _, new_db_path_str, exp_update_mapping_called, mock_update_mapping
     ):
-        mock_mypath(new_db_path_str, False).db_path_str = new_db_path_str
-        mapping_id = int()
+        mapping_id = 1
         response = self.client.post(
             reverse(
-                f"{urls.app_name}:mapping_details", kwargs={"mapping_id": mapping_id}
+                f"{urls.app_name}:mapping_details",
+                kwargs={"mapping_id": mapping_id},
             ),
             {"path": new_db_path_str},
+            follow=True,
         )
-        self.assertRedirects(
-            response,
-            reverse(f"{urls.app_name}:mappings_list"),
-            fetch_redirect_response=False,
-        )
-        mock_update_mapping.assert_called_once_with(mapping_id, new_db_path_str)
+        self.assertRedirects(response, reverse(f"{urls.app_name}:mappings_list"))
+        if exp_update_mapping_called:
+            mock_update_mapping.assert_called_once_with(mapping_id, new_db_path_str)
+        else:
+            mock_update_mapping.assert_not_called()
 
     @parameterized.expand(
         [
-            ("missing or empty string", "", False, False),
-            ("not allowed and does not exist", "foo", False, False),
-            ("not allowed and already exists", "/home/dino/Downloads", False, False),
-            ("allowed and does not exist", "foo", True, True),
-            ("allowed but already exists", "/home/dino/Downloads", True, False),
+            ("missing or empty string", "", False),
+            ("dot path", ".", False),
+            ("mapping does not exist yet", "/home/dino/Pictures", True),
+            ("mapping already exists", "/home/dino/Downloads", False),
         ]
     )
-    @unittest.mock.patch("pathtagger.views.MyPath", autospec=True)
     @unittest.mock.patch.object(views.db, "insert_mapping")
-    def test_add_mapping(  # pylint: disable=R0913
+    def test_add_mapping(
         self,
         _,
         db_path_str,
-        path_is_allowed,
         exp_insert_mapping_called,
         mock_insert_mapping,
-        mock_mypath,
     ):
-        mock_mypath(db_path_str, True).abs_path_is_taggable = path_is_allowed
-        mock_mypath(db_path_str, True).db_path_str = db_path_str
         response = self.client.post(
-            reverse(f"{urls.app_name}:add_mapping"), {"path": db_path_str}
+            reverse(f"{urls.app_name}:add_mapping"), {"path": db_path_str}, follow=True
         )
-        self.assertRedirects(
-            response,
-            reverse(f"{urls.app_name}:mappings_list"),
-            fetch_redirect_response=False,
-        )
+        self.assertRedirects(response, reverse(f"{urls.app_name}:mappings_list"))
         if exp_insert_mapping_called:
             mock_insert_mapping.assert_called_once_with(db_path_str, [])
         else:
@@ -193,56 +179,83 @@ class Test(SimpleTestCase):  # pylint: disable=R0904
 
     @parameterized.expand(
         [
-            ("some mappings selected", ["3", "4", "5"], 5, 13, 5),
-            ("no mappings selected", [], 5, 8, 3),
+            ("None mappings", None, [], None, {}),
+            ("no new tag names", ["3", "4", "5"], [3, 4, 5], None, {}),
+            (
+                "tags to create",
+                ["3", "4", "5"],
+                [3, 4, 5],
+                "completely new tag 1, completely new tag 2",
+                {},
+            ),
+            (
+                "tags to add and remove",
+                ["3", "4", "5"],
+                [3, 4, 5],
+                None,
+                {"tag_3": "append", "tag_2": "remove"},
+            ),
+            (
+                "tags to create, add and remove",
+                ["3", "4", "5"],
+                [3, 4, 5],
+                "completely new tag 1, completely new tag 2",
+                {"tag_3": "append", "tag_2": "remove"},
+            ),
         ]
     )
     def test_edit_mappings_action_edit_tags(
+        self, _, mapping_ids, exp_mapping_ids, new_tag_names, tags_to_append_and_remove
+    ):
+        queryset = {
+            "action_edit_tags": "foo",
+            "mapping_id": mapping_ids,
+            "new_tag_names": new_tag_names,
+            "tag_3": "append",
+            "tag_2": "remove",
+        }
+        queryset.update(tags_to_append_and_remove)
+        for param in ["mapping_id", "new_tag_names"]:
+            if queryset[param] is None:
+                del queryset[param]
+        response = self.client.post(
+            reverse(f"{urls.app_name}:edit_mappings"), {**queryset}, follow=True
+        )
+        self.assertRedirects(
+            response,
+            reverse(f"{urls.app_name}:mappings_list"),
+            fetch_redirect_response=True,
+        )
+
+    @parameterized.expand(
+        [
+            ("None", None, [], True),
+            ("empty", [], [], True),
+            ("non-empty", ["1", "3", "5"], [1, 3, 5], True),
+        ]
+    )
+    @unittest.mock.patch.object(views.db, "delete_mappings")
+    def test_delete_mappings(
         self,
         _,
         mapping_ids,
-        exp_mappings_count,
-        exp_total_applied_tags_count,
-        exp_all_tags_count,
+        exp_mapping_ids,
+        exp_delete_mappings_called,
+        mock_delete_mappings,
     ):
+        queryset = {"mapping_id": mapping_ids} if mapping_ids else {}
         response = self.client.post(
-            reverse(f"{urls.app_name}:edit_mappings"),
-            {
-                "action_edit_tags": "foo",
-                "mapping_id": mapping_ids,
-                "tag_3": "append",
-                "tag_2": "remove",
-                "new_tag_names": "completely new tag 1, completely new tag 2",
-            },
+            reverse(f"{urls.app_name}:delete_mappings"), {**queryset}, follow=True
         )
-        self.assertEqual(response.status_code, 200)
-        self.assertTrue(
-            f"{urls.app_name}/mappings_list.html"
-            in [template.name for template in response.templates]
+        self.assertRedirects(
+            response,
+            reverse(f"{urls.app_name}:mappings_list"),
+            fetch_redirect_response=True,
         )
-        soup = BeautifulSoup(response.content, "lxml")
-        self.assertEqual(_row_count(soup, "mappings_table_body"), exp_mappings_count)
-        self.assertEqual(
-            len(soup.select_one("#mappings_table_body").select(".tag")),
-            exp_total_applied_tags_count,
-        )
-        self.assertEqual(
-            len(soup.select_one("#tags_table_body").select(".tag")), exp_all_tags_count
-        )
-
-    def test_delete_mappings(self):
-        response = self.client.post(
-            reverse(f"{urls.app_name}:delete_mappings"), {"mapping_id": ["1", "3", "5"]}
-        )
-        self.assertEqual(response.status_code, 200)
-        self.assertTrue(
-            f"{urls.app_name}/mappings_list.html"
-            in [template.name for template in response.templates]
-        )
-        soup = BeautifulSoup(response.content, "lxml")
-        self.assertEqual(_row_count(soup, "mappings_table_body"), 2)
-        self.assertEqual(len(soup.select_one("#mappings_table_body").select(".tag")), 4)
-        self.assertEqual(len(soup.select_one("#tags_table_body").select(".tag")), 3)
+        if exp_delete_mappings_called:
+            mock_delete_mappings.assert_called_once_with(exp_mapping_ids)
+        else:
+            mock_delete_mappings.assert_not_called()
 
     @parameterized.expand([("all", 5, 8), ("existent", 4, 6), ("nonexistent", 1, 2)])
     def test_mappings_list(
@@ -288,66 +301,96 @@ class Test(SimpleTestCase):  # pylint: disable=R0904
             3,
         )
 
-    def test_tag_details_post(self):
-        new_name, new_color = "New tag name", "#000001"
+    @parameterized.expand(
+        [
+            ("no name", None, "#AB3456", "#AB3456", False),
+            ("empty name", "", "#AB3456", "#AB3456", False),
+            ("name already exists", "Videos", "#AB3456", "#AB3456", False),
+            ("no color", "New tag name", None, params.DEFAULT_TAG_COLOR, True),
+            ("empty color", "New tag name", "", "", False),
+            ("valid name and color", "New tag name", "#AB3456", "#AB3456", True),
+        ]
+    )
+    @unittest.mock.patch.object(views.db, "update_tag")
+    def test_tag_details_post(
+        self, _, name, color, exp_color, exp_update_tag_called, mock_update_tag
+    ):
+        tag_id = 2
+        queryset = {"name": name, "color": color}
+        for param in ["name", "color"]:
+            if queryset[param] is None:
+                del queryset[param]
         response = self.client.post(
-            reverse(f"{urls.app_name}:tag_details", kwargs={"tag_id": 2}),
-            {"name": new_name, "color": new_color},
+            reverse(f"{urls.app_name}:tag_details", kwargs={"tag_id": tag_id}),
+            {**queryset},
+            follow=True,
         )
-        self.assertEqual(response.status_code, 200)
-        self.assertTrue(
-            f"{urls.app_name}/tag_details.html"
-            in [template.name for template in response.templates]
+        self.assertRedirects(
+            response,
+            reverse(f"{urls.app_name}:tags_list"),
+            fetch_redirect_response=True,
         )
-        soup = BeautifulSoup(response.content, "lxml")
-        self.assertEqual(
-            soup.select_one("input[form=TagEditForm][name=name]")["value"], new_name
-        )
-        self.assertEqual(
-            soup.select_one("input[form=TagEditForm][name=color]")["value"], new_color
-        )
+        if exp_update_tag_called:
+            mock_update_tag.assert_called_once_with(tag_id, name, exp_color)
+        else:
+            mock_update_tag.assert_not_called()
 
     @parameterized.expand(
         [
-            ("name and color", "New tag", "#AB3456", 4),
-            ("empty name", "", "#AB3456", 3),
-            ("empty color", "New tag", "", 4),
-            ("name already exists", "Videos", "#AB3456", 3),
+            ("no name", None, "#AB3456", "#AB3456", False),
+            ("empty name", "", "#AB3456", "#AB3456", False),
+            ("name already exists", "Videos", "#AB3456", "#AB3456", False),
+            ("no color", "New tag name", None, params.DEFAULT_TAG_COLOR, True),
+            ("empty color", "New tag name", "", "", False),
+            ("valid name and color", "New tag name", "#AB3456", "#AB3456", True),
         ]
     )
-    def test_add_tag(self, _, name, color, exp_tags_table_row_count):
+    @unittest.mock.patch.object(views.db, "insert_tag")
+    def test_add_tag(
+        self, _, name, color, exp_color, exp_insert_tag_called, mock_insert_tag
+    ):
+        # TODO
+        queryset = {"name": name, "color": color}
+        for param in ["name", "color"]:
+            if queryset[param] is None:
+                del queryset[param]
         response = self.client.post(
-            reverse(f"{urls.app_name}:add_tag"), {"name": name, "color": color}
+            reverse(f"{urls.app_name}:add_tag"), {**queryset}, follow=True
         )
-        self.assertEqual(response.status_code, 200)
-        self.assertTrue(
-            f"{urls.app_name}/tags_list.html"
-            in [template.name for template in response.templates]
+        self.assertRedirects(
+            response,
+            reverse(f"{urls.app_name}:tags_list"),
+            fetch_redirect_response=True,
         )
-        self.assertEqual(
-            _row_count(BeautifulSoup(response.content, "lxml"), "tags_table_body"),
-            exp_tags_table_row_count,
-        )
+        if exp_insert_tag_called:
+            mock_insert_tag.assert_called_once_with(name, exp_color)
+        else:
+            mock_insert_tag.assert_not_called()
 
     @parameterized.expand(
         [
-            ("existing single", {"tag_id": ["3"]}, 2),
-            ("existing many", {"tag_id": ["3", "2"]}, 1),
-            ("none", {"tag_id": []}, 3),
-            ("all", {"tag_id": ["1", "2", "3"]}, -1),
+            ("None", None, [], True),
+            ("empty", [], [], True),
+            ("non-empty", ["3", "2"], [3, 2], True),
         ]
     )
-    def test_delete_tags(self, _, post_data, exp_tags_table_row_count):
-        response = self.client.post(reverse(f"{urls.app_name}:delete_tags"), post_data)
-        self.assertEqual(response.status_code, 200)
-        self.assertTrue(
-            f"{urls.app_name}/tags_list.html"
-            in [template.name for template in response.templates]
+    @unittest.mock.patch.object(views.db, "delete_tags")
+    def test_delete_tags(
+        self, _, tag_ids, exp_tag_ids, exp_delete_tags_called, mock_delete_tags
+    ):
+        queryset = {"tag_id": tag_ids} if tag_ids else {}
+        response = self.client.post(
+            reverse(f"{urls.app_name}:delete_tags"), {**queryset}, follow=True
         )
-        self.assertEqual(
-            _row_count(BeautifulSoup(response.content, "lxml"), "tags_table_body"),
-            exp_tags_table_row_count,
+        self.assertRedirects(
+            response,
+            reverse(f"{urls.app_name}:tags_list"),
+            fetch_redirect_response=True,
         )
+        if exp_delete_tags_called:
+            mock_delete_tags.assert_called_once_with(exp_tag_ids)
+        else:
+            mock_delete_tags.assert_not_called()
 
     def test_tags_list(self):
         response = self.client.get(reverse(f"{urls.app_name}:tags_list"))

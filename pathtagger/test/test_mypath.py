@@ -14,12 +14,13 @@ class TestMyPath(unittest.TestCase):
                 False,
                 None,
                 False,
-                ".",
-                Path("."),
-                ".",
-                ".",
-                Path("."),
-                ".",
+                MyPath.INVALID_PATH_STR,
+                Path(MyPath.INVALID_PATH_STR),
+                MyPath.INVALID_PATH_STR,
+                MyPath.INVALID_PATH_STR,
+                Path(MyPath.INVALID_PATH_STR),
+                MyPath.INVALID_PATH_STR,
+                False,
             ),
             (
                 "",
@@ -32,18 +33,20 @@ class TestMyPath(unittest.TestCase):
                 "/",
                 Path("/"),
                 "/",
+                True,
             ),
             (
                 ".",
                 False,
                 None,
                 False,
-                ".",
-                Path("."),
-                ".",
-                ".",
-                Path("."),
-                ".",
+                MyPath.INVALID_PATH_STR,
+                Path(MyPath.INVALID_PATH_STR),
+                MyPath.INVALID_PATH_STR,
+                MyPath.INVALID_PATH_STR,
+                Path(MyPath.INVALID_PATH_STR),
+                MyPath.INVALID_PATH_STR,
+                False,
             ),
             (
                 ".",
@@ -56,6 +59,7 @@ class TestMyPath(unittest.TestCase):
                 "/",
                 Path("/"),
                 "/",
+                True,
             ),
             (
                 "/",
@@ -68,6 +72,7 @@ class TestMyPath(unittest.TestCase):
                 "/",
                 Path("/"),
                 "/",
+                True,
             ),
             (
                 "/",
@@ -80,6 +85,7 @@ class TestMyPath(unittest.TestCase):
                 "/",
                 Path("/"),
                 "/",
+                True,
             ),
             (
                 "/Videos",
@@ -92,6 +98,7 @@ class TestMyPath(unittest.TestCase):
                 "/Videos",
                 Path("/Videos"),
                 "/Videos",
+                True,
             ),
             (
                 "/Videos",
@@ -104,6 +111,7 @@ class TestMyPath(unittest.TestCase):
                 "/Videos",
                 Path("/Videos"),
                 "/Videos",
+                True,
             ),
             (
                 "Videos/",
@@ -116,6 +124,7 @@ class TestMyPath(unittest.TestCase):
                 "/Videos",
                 Path("/Videos"),
                 "/Videos",
+                True,
             ),
             (
                 "Videos/",
@@ -128,6 +137,7 @@ class TestMyPath(unittest.TestCase):
                 "/Videos",
                 Path("/Videos"),
                 "/Videos",
+                True,
             ),
             (
                 "/Videos/",
@@ -140,6 +150,7 @@ class TestMyPath(unittest.TestCase):
                 "/Videos",
                 Path("/Videos"),
                 "/Videos",
+                True,
             ),
             (
                 "/Videos/",
@@ -152,6 +163,7 @@ class TestMyPath(unittest.TestCase):
                 "/Videos",
                 Path("/Videos"),
                 "/Videos",
+                True,
             ),
             (
                 "//Videos",
@@ -164,6 +176,7 @@ class TestMyPath(unittest.TestCase):
                 "/Videos",
                 Path("/Videos"),
                 "/Videos",
+                True,
             ),
             (
                 "//Videos",
@@ -176,6 +189,7 @@ class TestMyPath(unittest.TestCase):
                 "/Videos",
                 Path("/Videos"),
                 "/Videos",
+                True,
             ),
             (
                 "/Videos//",
@@ -188,6 +202,7 @@ class TestMyPath(unittest.TestCase):
                 "/Videos",
                 Path("/Videos"),
                 "/Videos",
+                True,
             ),
             (
                 "/Videos//",
@@ -200,6 +215,7 @@ class TestMyPath(unittest.TestCase):
                 "/Videos",
                 Path("/Videos"),
                 "/Videos",
+                True,
             ),
             (
                 "/Videos/movies/Star Trek",
@@ -212,6 +228,7 @@ class TestMyPath(unittest.TestCase):
                 "/Videos/movies/Star Trek",
                 Path("/Videos/movies/Star Trek"),
                 "/Videos/movies/Star Trek",
+                True,
             ),
             (
                 "/Videos/movies/Star Trek",
@@ -224,6 +241,7 @@ class TestMyPath(unittest.TestCase):
                 "/Videos/movies/Star Trek",
                 Path("/Videos/movies/Star Trek"),
                 "/Videos/movies/Star Trek",
+                True,
             ),
             (
                 "/Videos//movies/Star Trek",
@@ -236,6 +254,7 @@ class TestMyPath(unittest.TestCase):
                 "/Videos/movies/Star Trek",
                 Path("/Videos/movies/Star Trek"),
                 "/Videos/movies/Star Trek",
+                True,
             ),
             (
                 "/Videos//movies/Star Trek",
@@ -248,6 +267,7 @@ class TestMyPath(unittest.TestCase):
                 "/Videos/movies/Star Trek",
                 Path("/Videos/movies/Star Trek"),
                 "/Videos/movies/Star Trek",
+                True,
             ),
         ]
 
@@ -255,45 +275,39 @@ class TestMyPath(unittest.TestCase):
             raw_path,
             is_abs_path,
             base_path,
-            exp_abs_path_is_taggable,
+            exp_is_taggable,
             exp_abs_path_str,
             exp_abs_path,
             exp_system_abs_path_str,
             exp_db_path_str,
             exp_db_path,
             exp_system_db_path_str,
+            exp_is_valid_db_path_str,
         ) in test_data:
             with self.subTest(
                 raw_path=raw_path, is_abs_path=is_abs_path, base_path=base_path
             ):
                 params.BASE_PATH = base_path
+                for raw_value in [raw_path, Path(raw_path)]:
+                    mypath = MyPath(raw_value, is_abs_path)
+                    self.assertEqual(mypath.db_path_str, exp_db_path_str)
+                    self.assertEqual(mypath.db_path, exp_db_path)
+                    self.assertEqual(mypath.system_db_path_str, exp_system_db_path_str)
+                    self.assertEqual(mypath.abs_path_str, exp_abs_path_str)
+                    self.assertEqual(mypath.abs_path, exp_abs_path)
+                    self.assertEqual(
+                        mypath.system_abs_path_str, exp_system_abs_path_str
+                    )
+                    self.assertEqual(mypath.is_taggable(), exp_is_taggable)
+                    self.assertEqual(
+                        mypath.db_path_str_is_valid(), exp_is_valid_db_path_str
+                    )
 
-                mypath = MyPath(raw_path, is_abs_path)
-                self.assertEqual(mypath.db_path_str, exp_db_path_str)
-                self.assertEqual(mypath.db_path, exp_db_path)
-                self.assertEqual(mypath.system_db_path_str, exp_system_db_path_str)
-                self.assertEqual(mypath.abs_path_str, exp_abs_path_str)
-                self.assertEqual(mypath.abs_path, exp_abs_path)
-                self.assertEqual(mypath.system_abs_path_str, exp_system_abs_path_str)
-                self.assertEqual(mypath.abs_path_is_taggable, exp_abs_path_is_taggable)
-
-                mypath = MyPath(Path(raw_path), is_abs_path)
-                self.assertEqual(mypath.db_path_str, exp_db_path_str)
-                self.assertEqual(mypath.db_path, exp_db_path)
-                self.assertEqual(mypath.system_db_path_str, exp_system_db_path_str)
-                self.assertEqual(mypath.abs_path_str, exp_abs_path_str)
-                self.assertEqual(mypath.abs_path, exp_abs_path)
-                self.assertEqual(mypath.system_abs_path_str, exp_system_abs_path_str)
-                self.assertEqual(mypath.abs_path_is_taggable, exp_abs_path_is_taggable)
-
-    def test__to_db_path_str(self):
-        pass
-
-    # pylint: disable=W0212
     def test__to_formatted_posix_path(self):
+        # pylint: disable=W0212
         test_data = [
-            ("empty", "", "."),
-            ("dot str", ".", "."),
+            ("empty", "", MyPath.INVALID_PATH_STR),
+            ("dot str", ".", MyPath.INVALID_PATH_STR),
             ("root", "/", "/"),
             ("leading solidum", "/home/Videos", "/home/Videos"),
             ("trailing solidum", "home/Videos/", "/home/Videos"),
@@ -301,10 +315,10 @@ class TestMyPath(unittest.TestCase):
         ]
         for description, path, exp_rval in test_data:
             with self.subTest(description=description):
-                self.assertEqual(MyPath._to_formatted_posix_path(path), exp_rval)
+                self.assertEqual(MyPath._to_formatted_posix_path_str(path), exp_rval)
             path = Path(path)
             with self.subTest(description=description):
-                self.assertEqual(MyPath._to_formatted_posix_path(path), exp_rval)
+                self.assertEqual(MyPath._to_formatted_posix_path_str(path), exp_rval)
 
     @unittest.skipUnless(os.name == "posix", "requires Posix")
     def test_is_allowed_path_posix(self):

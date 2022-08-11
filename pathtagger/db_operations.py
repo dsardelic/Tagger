@@ -69,13 +69,10 @@ def get_tag_by_id(tag_id: int):
 
 
 def update_tag(tag_id: int, name: str, color: str):
-    if name or color:
-        tag = get_tag_by_id(tag_id)
-        if name:
-            tag["name"] = name
-        if color:
-            tag["color"] = color
-        DB.table("tags").write_back([tag])
+    tag = get_tag_by_id(tag_id)
+    tag["name"] = name
+    tag["color"] = color
+    DB.table("tags").write_back([tag])
 
 
 def get_mapping(mapping_id: int):
@@ -115,8 +112,7 @@ def delete_mappings(mapping_ids: List[int]):
 
 
 def update_mapping(mapping_id: int, path: str):
-    if path:
-        DB.update({"path": path}, doc_ids=[mapping_id])
+    DB.update({"path": path}, doc_ids=[mapping_id])
 
 
 def get_filtered_mappings(
