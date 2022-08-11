@@ -286,6 +286,26 @@ class TestMyPath(unittest.TestCase):
                 self.assertEqual(mypath.system_abs_path_str, exp_system_abs_path_str)
                 self.assertEqual(mypath.abs_path_is_taggable, exp_abs_path_is_taggable)
 
+    def test__to_db_path_str(self):
+        pass
+
+    # pylint: disable=W0212
+    def test__to_formatted_posix_path(self):
+        test_data = [
+            ("empty", "", "."),
+            ("dot str", ".", "."),
+            ("root", "/", "/"),
+            ("leading solidum", "/home/Videos", "/home/Videos"),
+            ("trailing solidum", "home/Videos/", "/home/Videos"),
+            ("leading and trailing solidum", "/home/Videos/", "/home/Videos"),
+        ]
+        for description, path, exp_rval in test_data:
+            with self.subTest(description=description):
+                self.assertEqual(MyPath._to_formatted_posix_path(path), exp_rval)
+            path = Path(path)
+            with self.subTest(description=description):
+                self.assertEqual(MyPath._to_formatted_posix_path(path), exp_rval)
+
     @unittest.skipUnless(os.name == "posix", "requires Posix")
     def test_is_allowed_path_posix(self):
         test_data = [

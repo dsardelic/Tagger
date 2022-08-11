@@ -60,19 +60,19 @@ class MyPath:
         return "."
 
     @staticmethod
-    def _to_formatted_posix_path(raw_path: Union[Path, str]) -> str:
-        raw_path = Path(raw_path)
-        if raw_path.as_posix() == ".":
+    def _to_formatted_posix_path(path: Union[Path, str]) -> str:
+        path = Path(path)
+        if path.as_posix() == ".":
             return "."
-        if isinstance(raw_path, PosixPath):
-            return "/" + raw_path.as_posix().strip("/")
-        return MyPath(raw_path, True).abs_path_str
+        if isinstance(path, PosixPath):
+            return "/" + path.as_posix().strip("/")
+        return MyPath(path, True).abs_path_str
 
 
 def get_extended_dataset(dataset):
     for element in dataset:
         mypath = MyPath(element["path"], False)
-        element["path_str"] = mypath.abs_path_str
+        element["abs_path_str"] = mypath.abs_path_str
         element["system_path_str"] = mypath.system_abs_path_str
         element["db_path_str"] = mypath.db_path_str
         element["path_exists"] = mypath.abs_path.exists()

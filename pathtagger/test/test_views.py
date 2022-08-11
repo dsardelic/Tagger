@@ -54,7 +54,7 @@ class Test(SimpleTestCase):  # pylint: disable=R0904
                 key in doc
                 for doc in docs
                 for key in [
-                    "path_str",
+                    "abs_path_str",
                     "system_path_str",
                     "db_path_str",
                     "path_exists",
