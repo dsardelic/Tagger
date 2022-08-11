@@ -14,15 +14,6 @@ class MyPath:
 
     INVALID_PATH_STR: str = "."
 
-    @staticmethod
-    def _to_formatted_posix_path_str(path: Union[Path, str]) -> str:
-        path = Path(path)
-        if path.as_posix() == MyPath.INVALID_PATH_STR:
-            return MyPath.INVALID_PATH_STR
-        if isinstance(path, PosixPath):
-            return "/" + path.as_posix().strip("/")
-        return MyPath(path, True).abs_path_str
-
     def __init__(self, raw_path: Union[Path, str], is_abs_path: bool):
         self.raw_path = raw_path
         if is_abs_path or not params.BASE_PATH:
@@ -68,6 +59,15 @@ class MyPath:
 
     def db_path_str_is_valid(self):
         return self.db_path_str and self.db_path_str != self.INVALID_PATH_STR
+
+    @staticmethod
+    def _to_formatted_posix_path_str(path: Union[Path, str]) -> str:
+        path = Path(path)
+        if path.as_posix() == MyPath.INVALID_PATH_STR:
+            return MyPath.INVALID_PATH_STR
+        if isinstance(path, PosixPath):
+            return "/" + path.as_posix().strip("/")
+        return MyPath(path, True).abs_path_str
 
 
 def get_extended_dataset(dataset):
