@@ -8,19 +8,44 @@ from Tagger import params
 
 class TestMyPath(unittest.TestCase):
     def test_attribues_and_properties(self):
-        # TODO: raw_input = None
         test_data = [
+            (
+                None,
+                False,
+                None,
+                False,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                False,
+            ),
+            (
+                None,
+                False,
+                Path("/home/user"),
+                False,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                False,
+            ),
             (
                 "",
                 False,
                 None,
                 False,
-                MyPath.INVALID_PATH_STR,
-                Path(MyPath.INVALID_PATH_STR),
-                MyPath.INVALID_PATH_STR,
-                MyPath.INVALID_PATH_STR,
-                Path(MyPath.INVALID_PATH_STR),
-                MyPath.INVALID_PATH_STR,
+                ".",
+                Path("."),
+                ".",
+                ".",
+                Path("."),
+                ".",
                 False,
             ),
             (
@@ -41,12 +66,12 @@ class TestMyPath(unittest.TestCase):
                 False,
                 None,
                 False,
-                MyPath.INVALID_PATH_STR,
-                Path(MyPath.INVALID_PATH_STR),
-                MyPath.INVALID_PATH_STR,
-                MyPath.INVALID_PATH_STR,
-                Path(MyPath.INVALID_PATH_STR),
-                MyPath.INVALID_PATH_STR,
+                ".",
+                Path("."),
+                ".",
+                ".",
+                Path("."),
+                ".",
                 False,
             ),
             (
@@ -289,8 +314,11 @@ class TestMyPath(unittest.TestCase):
                 raw_path=raw_path, is_abs_path=is_abs_path, base_path=base_path
             ):
                 params.BASE_PATH = base_path
-                for raw_value in [raw_path, Path(raw_path)]:
+                for raw_value in (
+                    [raw_path, Path(raw_path)] if raw_path is not None else [raw_path]
+                ):
                     mypath = MyPath(raw_value, is_abs_path)
+                    self.assertEqual(mypath.raw_path, raw_value)
                     self.assertEqual(mypath.db_path_str, exp_db_path_str)
                     self.assertEqual(mypath.db_path, exp_db_path)
                     self.assertEqual(mypath.system_db_path_str, exp_system_db_path_str)
@@ -307,8 +335,8 @@ class TestMyPath(unittest.TestCase):
     def test__to_formatted_posix_path(self):
         # pylint: disable=W0212
         test_data = [
-            ("empty", "", MyPath.INVALID_PATH_STR),
-            ("dot str", ".", MyPath.INVALID_PATH_STR),
+            ("empty", "", "."),
+            ("dot str", ".", "."),
             ("root", "/", "/"),
             ("leading solidum", "/home/Videos", "/home/Videos"),
             ("trailing solidum", "home/Videos/", "/home/Videos"),
