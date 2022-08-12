@@ -36,7 +36,7 @@
     <div class="left separate-left">
         {% if mappings %}
             <div class="div-title">MAPPINGS</div>
-            <form id="removeFromMappingsForm" action="{% url 'pathtagger:remove_tag_from_mappings' %}" method="POST"></form>
+            <form id="removeFromMappingsForm" action="{% url 'pathtagger:remove_tag_from_mappings' tag_id=tag.doc_id %}" method="POST"></form>
             <table style="margin-bottom:20px;">
             	<thead>
 	                <tr>
@@ -65,9 +65,8 @@
 	                            {% endfor %}
 	                        </td>
 	                        <td style='white-space: nowrap'>
-	                            <form id="removeFromMapping_{{ mapping.doc_id }}_Form" action="{% url 'pathtagger:remove_tag_from_mappings' %}" method="POST" style="display:inline-block;">
+	                            <form id="removeFromMapping_{{ mapping.doc_id }}_Form" action="{% url 'pathtagger:remove_tag_from_mappings' tag_id=tag.doc_id %}" method="POST" style="display:inline-block;">
 	                                <input form="removeFromMapping_{{ mapping.doc_id }}_Form" type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}"/>
-	                                <input form="removeFromMapping_{{ mapping.doc_id }}_Form" type="hidden" name="tag_id" value="{{ tag.doc_id }}"/>
 	                                <input form="removeFromMapping_{{ mapping.doc_id }}_Form" type="hidden" name="mapping_id" value="{{ mapping.doc_id }}"/>
 	                                <input form="removeFromMapping_{{ mapping.doc_id }}_Form" type="submit" value="Remove"/>
 	                            </form>
@@ -77,7 +76,6 @@
 	            </tbody>
             </table>
             <input form="removeFromMappingsForm" type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}"/>
-            <input form="removeFromMappingsForm" type="hidden" name="tag_id" value="{{ tag.doc_id }}"/>
             <input form="removeFromMappingsForm" type="submit" value="Remove selected"/>
         {% else %}
             There are no paths with this tag.

@@ -15,7 +15,7 @@ urlpatterns = [
     path("tags/delete/", views.delete_tags, name="delete_tags"),
     path("tags/", views.tags_list, name="tags_list"),
     path(
-        "tag/removefrommappings/",
+        "tag/<int:tag_id>/removefrommappings/",
         views.remove_tag_from_mappings,
         name="remove_tag_from_mappings",
     ),

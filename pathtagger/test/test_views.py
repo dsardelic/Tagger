@@ -1,5 +1,6 @@
 import os
 import unittest.mock
+from ast import literal_eval
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 
@@ -207,19 +208,19 @@ class Test(SimpleTestCase):
     def test_edit_mappings_action_edit_tags(
         self, _, mapping_ids, exp_mapping_ids, new_tag_names, tags_to_append_and_remove
     ):
-        queryset = {
+        data = {
             "action_edit_tags": "foo",
             "mapping_id": mapping_ids,
             "new_tag_names": new_tag_names,
             "tag_3": "append",
             "tag_2": "remove",
         }
-        queryset.update(tags_to_append_and_remove)
+        data.update(tags_to_append_and_remove)
         for param in ["mapping_id", "new_tag_names"]:
-            if queryset[param] is None:
-                del queryset[param]
+            if data[param] is None:
+                del data[param]
         response = self.client.post(
-            reverse(f"{urls.app_name}:edit_mappings"), {**queryset}, follow=True
+            reverse(f"{urls.app_name}:edit_mappings"), {**data}, follow=True
         )
         self.assertRedirects(
             response,
@@ -243,9 +244,9 @@ class Test(SimpleTestCase):
         exp_delete_mappings_called,
         mock_delete_mappings,
     ):
-        queryset = {"mapping_id": mapping_ids} if mapping_ids else {}
+        data = {"mapping_id": mapping_ids} if mapping_ids else {}
         response = self.client.post(
-            reverse(f"{urls.app_name}:delete_mappings"), {**queryset}, follow=True
+            reverse(f"{urls.app_name}:delete_mappings"), {**data}, follow=True
         )
         self.assertRedirects(
             response,
@@ -316,13 +317,13 @@ class Test(SimpleTestCase):
         self, _, name, color, exp_color, exp_update_tag_called, mock_update_tag
     ):
         tag_id = 2
-        queryset = {"name": name, "color": color}
+        data = {"name": name, "color": color}
         for param in ["name", "color"]:
-            if queryset[param] is None:
-                del queryset[param]
+            if data[param] is None:
+                del data[param]
         response = self.client.post(
             reverse(f"{urls.app_name}:tag_details", kwargs={"tag_id": tag_id}),
-            {**queryset},
+            {**data},
             follow=True,
         )
         self.assertRedirects(
@@ -349,13 +350,13 @@ class Test(SimpleTestCase):
     def test_add_tag(
         self, _, name, color, exp_color, exp_insert_tag_called, mock_insert_tag
     ):
-        # TODO
-        queryset = {"name": name, "color": color}
+        # TODO: data u svim POST requestima
+        data = {"name": name, "color": color}
         for param in ["name", "color"]:
-            if queryset[param] is None:
-                del queryset[param]
+            if data[param] is None:
+                del data[param]
         response = self.client.post(
-            reverse(f"{urls.app_name}:add_tag"), {**queryset}, follow=True
+            reverse(f"{urls.app_name}:add_tag"), {**data}, follow=True
         )
         self.assertRedirects(
             response,
@@ -378,9 +379,9 @@ class Test(SimpleTestCase):
     def test_delete_tags(
         self, _, tag_ids, exp_tag_ids, exp_delete_tags_called, mock_delete_tags
     ):
-        queryset = {"tag_id": tag_ids} if tag_ids else {}
+        data = {"tag_id": tag_ids} if tag_ids else {}
         response = self.client.post(
-            reverse(f"{urls.app_name}:delete_tags"), {**queryset}, follow=True
+            reverse(f"{urls.app_name}:delete_tags"), {**data}, follow=True
         )
         self.assertRedirects(
             response,
@@ -410,8 +411,34 @@ class Test(SimpleTestCase):
             _row_count(BeautifulSoup(response.content, "lxml"), "tags_table_body"), -1
         )
 
-    def test_remove_tag_from_mappings(self):
-        ...
+    @parameterized.expand(
+        [
+            ("None", None, []),
+            ("empty list", [], []),
+            ("non-empty list", ["1", "2", "3"], [1, 2, 3]),
+        ]
+    )
+    @unittest.mock.patch.object(views.db, "remove_tags_from_mappings")
+    def test_remove_tag_from_mappings(
+        self, _, mapping_ids, exp_mapping_ids, mock_remove_tags_from_mappings
+    ):
+        tag_id = int()
+        data = {"mapping_id": mapping_ids} if mapping_ids else {}
+        response = self.client.post(
+            reverse(
+                f"{urls.app_name}:remove_tag_from_mappings", kwargs={"tag_id": tag_id}
+            ),
+            {**data},
+            follow=True,
+        )
+        self.assertRedirects(
+            response,
+            reverse(f"{urls.app_name}:tag_details", kwargs={"tag_id": tag_id}),
+            fetch_redirect_response=True,
+        )
+        mock_remove_tags_from_mappings.assert_called_once_with(
+            [tag_id], exp_mapping_ids
+        )
 
     def test_path_details(self):
         ...
@@ -419,8 +446,82 @@ class Test(SimpleTestCase):
     def test_edit_path_tags(self):
         ...
 
-    def test_toggle_favorite_path(self):
-        ...
+    @parameterized.expand(
+        [
+            ("no path, non-ajax", None, False, None, None),
+            ("no path, ajax", None, True, None, {"status": "nok"}),
+            ("empty path, non-ajax", "", False, None, None),
+            ("empty path, ajax", "", True, None, {"status": "nok"}),
+            (
+                "non-empty path, non-ajax, currently not favorite",
+                "/home/dino",
+                False,
+                False,
+                None,
+            ),
+            (
+                "non-empty path, non-ajax, currently favorite",
+                "/home/dino",
+                False,
+                True,
+                None,
+            ),
+            (
+                "non-empty path, ajax, currently not favorite",
+                "/home/dino",
+                True,
+                False,
+                {"status": "ok", "is_favorite": "True"},
+            ),
+            (
+                "non-empty path, ajax, currently favorite",
+                "/home/dino",
+                True,
+                True,
+                {"status": "ok", "is_favorite": "False"},
+            ),
+        ]
+    )
+    @unittest.mock.patch.object(views.db, "delete_favorite_path")
+    @unittest.mock.patch.object(views.db, "insert_favorite_path")
+    @unittest.mock.patch.object(views.db, "get_favorite_path")
+    def test_toggle_favorite_path(
+        self,
+        _,
+        path_str,
+        is_ajax_call,
+        prev_is_favorite,
+        exp_json_response_dict,
+        mock_get_favorite_path,
+        mock_insert_favorite_path,
+        mock_delete_favorite_path,
+    ):
+        data = {"path": path_str} if path_str else {}
+        headers = {"HTTP_X_REQUESTED_WITH": "XMLHttpRequest"} if is_ajax_call else {}
+        mock_get_favorite_path.return_value = prev_is_favorite
+        response = self.client.post(
+            reverse(f"{urls.app_name}:toggle_favorite_path"),
+            {**data},
+            follow=True,
+            **headers,
+        )
+        if path_str:
+            if prev_is_favorite:
+                mock_insert_favorite_path.assert_not_called()
+                mock_delete_favorite_path.assert_called_once()
+            else:
+                mock_insert_favorite_path.assert_called_once()
+                mock_delete_favorite_path.assert_not_called()
+        if is_ajax_call:
+            self.assertEqual(
+                literal_eval(response.content.decode("utf-8")), exp_json_response_dict
+            )
+        else:
+            self.assertRedirects(
+                response,
+                reverse(f"{urls.app_name}:homepage"),
+                fetch_redirect_response=True,
+            )
 
     @parameterized.expand(
         [

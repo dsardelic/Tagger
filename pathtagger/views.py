@@ -236,8 +236,7 @@ def tags_list(request):
     return render(request, "pathtagger/tags_list.html", {"tags": tags})
 
 
-def remove_tag_from_mappings(request):
-    tag_id = int(request.POST.get("tag_id", 0))
+def remove_tag_from_mappings(request, tag_id):
     db.remove_tags_from_mappings(
         [tag_id],
         [int(mapping_id) for mapping_id in request.POST.getlist("mapping_id", [])],
@@ -319,15 +318,18 @@ def edit_path_tags(request):
 
 
 def toggle_favorite_path(request):
-    mypath = MyPath(request.POST.get("path", None), True)
-    if not db.get_favorite_path(mypath.db_path_str):
-        db.insert_favorite_path(mypath.db_path_str)
-        is_favorite = True
-    else:
-        db.delete_favorite_path(mypath.db_path_str)
-        is_favorite = False
-    if request.is_ajax():
-        return JsonResponse({"status": "ok", "is_favorite": str(bool(is_favorite))})
+    mypath = MyPath(request.POST.get("path", ""), True)
+    if mypath.db_path_str_is_valid():
+        if db.get_favorite_path(mypath.db_path_str):
+            db.delete_favorite_path(mypath.db_path_str)
+            is_favorite = False
+        else:
+            db.insert_favorite_path(mypath.db_path_str)
+            is_favorite = True
+        if request.is_ajax():
+            return JsonResponse({"status": "ok", "is_favorite": str(bool(is_favorite))})
+    elif request.is_ajax():
+        return JsonResponse({"status": "nok"})
     return redirect("pathtagger:homepage")
 
 

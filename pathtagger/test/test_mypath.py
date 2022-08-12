@@ -8,6 +8,7 @@ from Tagger import params
 
 class TestMyPath(unittest.TestCase):
     def test_attribues_and_properties(self):
+        # TODO: raw_input = None
         test_data = [
             (
                 "",
