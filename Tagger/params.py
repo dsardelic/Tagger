@@ -12,6 +12,8 @@ DB_PATH = Path(settings.BASE_DIR).joinpath("TaggerDB.json")
 if "DB_PATH" in CONFIG["DEFAULT"]:
     DB_PATH = Path(CONFIG["DEFAULT"]["DB_PATH"])
 
+
+# TODO: BASE_PATH neka bude str
 BASE_PATH: Optional[Path] = None
 if base_path_str := CONFIG["DEFAULT"].get("BASE_PATH", None):
     BASE_PATH = Path(base_path_str + os.sep)

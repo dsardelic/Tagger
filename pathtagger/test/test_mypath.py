@@ -1,26 +1,32 @@
-import unittest
+import unittest.mock
 from pathlib import Path
 
 from pathtagger.views import MyPath
 from Tagger import params
 
 
+# pylint: disable=R0904
 class TestMyPath(unittest.TestCase):
     # TODO: u svim metodama provjeriti da se poziva _to_formatted_posix_path_str!
 
-    def test_no_base_path(self):
+    @unittest.mock.patch.object(MyPath, "_to_formatted_posix_path_str", autospec=True)
+    def test_no_base_path(self, mock__to_formatted_posix_path_str):
         test_data = [
             (
                 None,
                 False,
                 None,
                 None,
+                None,
+                None,
                 False,
                 False,
             ),
             (
                 None,
                 True,
+                None,
+                None,
                 None,
                 None,
                 False,
@@ -29,8 +35,10 @@ class TestMyPath(unittest.TestCase):
             (
                 "",
                 False,
-                ".",
-                ".",
+                None,
+                None,
+                None,
+                None,
                 False,
                 False,
             ),
@@ -38,15 +46,19 @@ class TestMyPath(unittest.TestCase):
                 "",
                 True,
                 ".",
+                Path("."),
                 ".",
+                Path("."),
                 False,
                 False,
             ),
             (
                 ".",
                 False,
-                ".",
-                ".",
+                None,
+                None,
+                None,
+                None,
                 False,
                 False,
             ),
@@ -54,7 +66,9 @@ class TestMyPath(unittest.TestCase):
                 ".",
                 True,
                 ".",
+                Path("."),
                 ".",
+                Path("."),
                 False,
                 False,
             ),
@@ -62,7 +76,9 @@ class TestMyPath(unittest.TestCase):
                 "/",
                 False,
                 "/",
+                Path("/"),
                 "/",
+                Path("/"),
                 True,
                 True,
             ),
@@ -70,7 +86,9 @@ class TestMyPath(unittest.TestCase):
                 "/",
                 True,
                 "/",
+                Path("/"),
                 "/",
+                Path("/"),
                 True,
                 True,
             ),
@@ -78,7 +96,9 @@ class TestMyPath(unittest.TestCase):
                 "/Videos",
                 False,
                 "/Videos",
+                Path("/Videos"),
                 "/Videos",
+                Path("/Videos"),
                 True,
                 True,
             ),
@@ -86,23 +106,29 @@ class TestMyPath(unittest.TestCase):
                 "/Videos",
                 True,
                 "/Videos",
+                Path("/Videos"),
                 "/Videos",
+                Path("/Videos"),
                 True,
                 True,
             ),
             (
-                "/Videos/movies/Star Trek",
+                "/Videos/movies/Tarantino",
                 False,
-                "/Videos/movies/Star Trek",
-                "/Videos/movies/Star Trek",
+                "/Videos/movies/Tarantino",
+                Path("/Videos/movies/Tarantino"),
+                "/Videos/movies/Tarantino",
+                Path("/Videos/movies/Tarantino"),
                 True,
                 True,
             ),
             (
-                "/Videos/movies/Star Trek",
+                "/Videos/movies/Tarantino",
                 True,
-                "/Videos/movies/Star Trek",
-                "/Videos/movies/Star Trek",
+                "/Videos/movies/Tarantino",
+                Path("/Videos/movies/Tarantino"),
+                "/Videos/movies/Tarantino",
+                Path("/Videos/movies/Tarantino"),
                 True,
                 True,
             ),
@@ -112,7 +138,9 @@ class TestMyPath(unittest.TestCase):
             raw_path,
             is_abs_path,
             exp_abs_path_str,
+            exp_abs_path,
             exp_db_path_str,
+            exp_db_path,
             exp_is_taggable,
             exp_is_valid_db_path_str,
         ) in test_data:
@@ -121,151 +149,376 @@ class TestMyPath(unittest.TestCase):
                 for raw_value in (
                     [raw_path, Path(raw_path)] if raw_path is not None else [raw_path]
                 ):
+                    mock__to_formatted_posix_path_str.reset_mock()
+                    mock__to_formatted_posix_path_str.return_value = Path(
+                        raw_value
+                    ).as_posix()
                     mypath = MyPath(raw_value, is_abs_path)
+                    if raw_path:
+                        mock__to_formatted_posix_path_str.assert_called()
                     self.assertEqual(mypath.raw_path, raw_value)
                     self.assertEqual(mypath.abs_path_str, exp_abs_path_str)
+                    self.assertEqual(mypath.abs_path, exp_abs_path)
                     self.assertEqual(mypath.db_path_str, exp_db_path_str)
-                    self.assertEqual(mypath.abs_path_str, mypath.db_path_str)
+                    self.assertEqual(mypath.db_path, exp_db_path)
                     self.assertEqual(mypath.is_taggable(), exp_is_taggable)
                     self.assertEqual(
                         mypath.db_path_str_is_valid(), exp_is_valid_db_path_str
                     )
 
-    def test_abs_path_is_ancestor_of_base_path(self):
+    @unittest.mock.patch.object(MyPath, "_to_formatted_posix_path_str", autospec=True)
+    def test_abs_path_is_ancestor_of_base_path(self, mock__to_formatted_posix_path_str):
         test_data = [
+            ("/", Path("/home/user"), "/", Path("/")),
+            ("/home", Path("/home/user"), "/home", Path("/home")),
+        ]
+        for (
+            raw_path,
+            base_path,
+            exp_abs_path_str,
+            exp_abs_path,
+        ) in test_data:
+            with self.subTest(raw_path=raw_path, base_path=base_path):
+                params.BASE_PATH = base_path
+                mock__to_formatted_posix_path_str.reset_mock()
+                mock__to_formatted_posix_path_str.return_value = Path(
+                    raw_value
+                ).as_posix()
+                mypath = MyPath(raw_value, is_abs_path)
+                if raw_path:
+                    mock__to_formatted_posix_path_str.assert_called()
+                for raw_value in [raw_path, Path(raw_path)]:
+                    mypath = MyPath(raw_value, True)
+                    self.assertEqual(mypath.raw_path, raw_value)
+                    self.assertEqual(mypath.abs_path_str, exp_abs_path_str)
+                    self.assertEqual(mypath.abs_path, exp_abs_path)
+                    self.assertIsNone(mypath.db_path_str)
+                    self.assertIsNone(mypath.db_path)
+                    self.assertFalse(mypath.is_taggable())
+                    self.assertFalse(mypath.db_path_str_is_valid())
+
+    @unittest.mock.patch.object(MyPath, "_to_formatted_posix_path_str", autospec=True)
+    def test_abs_path_is_base_path(self, mock__to_formatted_posix_path_str):
+        base_path_strs = ["/", "/home", "/home/user"]
+        for base_path_str in base_path_strs:
+            with self.subTest(base_path_str=base_path_str):
+                params.BASE_PATH = Path(base_path_str)
+                for base_path_value in [base_path_str, Path(base_path_str)]:
+                    mock__to_formatted_posix_path_str.reset_mock()
+                    mock__to_formatted_posix_path_str.return_value = Path(
+                        raw_value
+                    ).as_posix()
+                    mypath = MyPath(raw_value, is_abs_path)
+                    if raw_path:
+                        mock__to_formatted_posix_path_str.assert_called()
+                    mypath = MyPath(base_path_value, True)
+                    self.assertEqual(mypath.raw_path, base_path_value)
+                    self.assertEqual(mypath.abs_path_str, base_path_str)
+                    self.assertEqual(mypath.abs_path, Path(base_path_str))
+                    self.assertEqual(mypath.db_path_str, "/")
+                    self.assertEqual(mypath.db_path, Path("/"))
+                    self.assertTrue(mypath.is_taggable())
+                    self.assertTrue(mypath.db_path_str_is_valid())
+
+    @unittest.mock.patch.object(MyPath, "_to_formatted_posix_path_str", autospec=True)
+    def test_abs_path_is_descendant_of_base_path(
+        self, mock__to_formatted_posix_path_str
+    ):
+        test_data = [
+            ("/home/user/Videos", Path("/home/user"), "/home/user/Videos", "/Videos"),
             (
-                "/",
-                True,
+                "/home/user/Videos/Tarantino",
                 Path("/home/user"),
-                False,
-                "/",
-                None,
-                False,
+                "/home/user/Videos/Tarantino",
+                "/Videos/Tarantino",
             ),
         ]
+        for (
+            raw_path,
+            base_path,
+            exp_abs_path_str,
+            exp_db_path_str,
+        ) in test_data:
+            with self.subTest(raw_path=raw_path, base_path=base_path):
+                params.BASE_PATH = base_path
+                for raw_value in [raw_path, Path(raw_path)]:
+                    mock__to_formatted_posix_path_str.reset_mock()
+                    mock__to_formatted_posix_path_str.return_value = Path(
+                        raw_value
+                    ).as_posix()
+                    mypath = MyPath(raw_value, is_abs_path)
+                    if raw_path:
+                        mock__to_formatted_posix_path_str.assert_called()
+                    mypath = MyPath(raw_value, True)
+                    self.assertEqual(mypath.raw_path, raw_value)
+                    self.assertEqual(mypath.abs_path_str, exp_abs_path_str)
+                    self.assertEqual(mypath.abs_path, Path(exp_abs_path_str))
+                    self.assertEqual(mypath.db_path_str, exp_db_path_str)
+                    self.assertEqual(mypath.db_path, Path(exp_db_path_str))
+                    self.assertTrue(mypath.is_taggable())
+                    self.assertTrue(mypath.db_path_str_is_valid())
 
-    def test_abs_path_is_base_path(self):
-        test_data = []
-
-    def test_abs_path_is_descendant_of_base_path(self):
-        test_data = []
-
-    def test_abs_path_is_unrelated_to_base_path(self):
+    @unittest.mock.patch.object(MyPath, "_to_formatted_posix_path_str", autospec=True)
+    def test_abs_path_is_unrelated_to_base_path(
+        self, mock__to_formatted_posix_path_str
+    ):
         test_data = [
             (
                 None,
-                True,
                 Path("/home/user"),
-                False,
                 None,
                 None,
-                False,
             ),
             (
                 "",
-                True,
                 Path("/home/user"),
-                False,
                 ".",
-                None,
-                False,
+                Path("."),
             ),
             (
                 ".",
-                True,
                 Path("/home/user"),
-                False,
                 ".",
-                None,
-                False,
+                Path("."),
             ),
             (
-                "/Videos",
-                True,
+                "/usr",
                 Path("/home/user"),
-                False,
-                "/Videos",
-                None,
-                False,
+                "/usr",
+                Path("/usr"),
             ),
             (
-                "/Videos/movies/Star Trek",
-                True,
+                "/usr/bin",
                 Path("/home/user"),
-                False,
-                "/Videos/movies/Star Trek",
-                None,
-                False,
+                "/usr/bin",
+                Path("/usr/bin"),
             ),
         ]
 
-    def test_db_path_is_ancestor_of_base_path(self):
+        for (
+            raw_path,
+            base_path,
+            exp_abs_path_str,
+            exp_abs_path,
+        ) in test_data:
+            with self.subTest(raw_path=raw_path, base_path=base_path):
+                params.BASE_PATH = base_path
+                for raw_value in (
+                    [raw_path, Path(raw_path)] if raw_path is not None else [raw_path]
+                ):
+                    mock__to_formatted_posix_path_str.reset_mock()
+                    mock__to_formatted_posix_path_str.return_value = Path(
+                        raw_value
+                    ).as_posix()
+                    mypath = MyPath(raw_value, is_abs_path)
+                    if raw_path:
+                        mock__to_formatted_posix_path_str.assert_called()
+                    mypath = MyPath(raw_value, True)
+                    self.assertEqual(mypath.raw_path, raw_value)
+                    self.assertEqual(mypath.abs_path_str, exp_abs_path_str)
+                    self.assertEqual(mypath.abs_path, exp_abs_path)
+                    self.assertIsNone(mypath.db_path_str)
+                    self.assertIsNone(mypath.db_path)
+                    self.assertFalse(mypath.is_taggable())
+                    self.assertFalse(mypath.db_path_str_is_valid())
+
+    @unittest.mock.patch.object(MyPath, "_to_formatted_posix_path_str", autospec=True)
+    def test_db_path_is_ancestor_of_base_path(self, mock__to_formatted_posix_path_str):
         test_data = [
+            ("/", Path("/home/user"), "/home/user", Path("/home/user"), "/", Path("/")),
             (
-                "/",
-                False,
+                "/home",
                 Path("/home/user"),
-                True,
-                "/home/user",
-                "/",
-                True,
+                "/home/user/home",
+                Path("/home/user/home"),
+                "/home",
+                Path("/home"),
             ),
         ]
+        for (
+            raw_path,
+            base_path,
+            exp_abs_path_str,
+            exp_abs_path,
+            exp_db_path_str,
+            exp_db_path,
+        ) in test_data:
+            with self.subTest(raw_path=raw_path, base_path=base_path):
+                params.BASE_PATH = base_path
+                for raw_value in [raw_path, Path(raw_path)]:
+                    mock__to_formatted_posix_path_str.reset_mock()
+                    mock__to_formatted_posix_path_str.return_value = Path(
+                        raw_value
+                    ).as_posix()
+                    mypath = MyPath(raw_value, is_abs_path)
+                    if raw_path:
+                        mock__to_formatted_posix_path_str.assert_called()
+                    mypath = MyPath(raw_value, False)
+                    self.assertEqual(mypath.raw_path, raw_value)
+                    self.assertEqual(mypath.abs_path_str, exp_abs_path_str)
+                    self.assertEqual(mypath.abs_path, exp_abs_path)
+                    self.assertEqual(mypath.db_path_str, exp_db_path_str)
+                    self.assertEqual(mypath.db_path, exp_db_path)
+                    self.assertTrue(mypath.is_taggable())
+                    self.assertTrue(mypath.db_path_str_is_valid())
 
-    def test_db_path_is_base_path(self):
-        test_data = []
+    @unittest.mock.patch.object(MyPath, "_to_formatted_posix_path_str", autospec=True)
+    def test_db_path_is_base_path(self, mock__to_formatted_posix_path_str):
+        test_data = [
+            ("/", "/"),
+            ("/home", "/home/home"),
+            ("/home/user", "/home/user/home/user"),
+        ]
+        for base_path_str, exp_abs_path_str in test_data:
+            with self.subTest(base_path_str=base_path_str):
+                params.BASE_PATH = Path(base_path_str)
+                for base_path_value in [base_path_str, Path(base_path_str)]:
+                    mock__to_formatted_posix_path_str.reset_mock()
+                    mock__to_formatted_posix_path_str.return_value = Path(
+                        raw_value
+                    ).as_posix()
+                    mypath = MyPath(raw_value, is_abs_path)
+                    if raw_path:
+                        mock__to_formatted_posix_path_str.assert_called()
+                    mypath = MyPath(base_path_value, False)
+                    self.assertEqual(mypath.raw_path, base_path_value)
+                    self.assertEqual(mypath.abs_path_str, exp_abs_path_str)
+                    self.assertEqual(mypath.abs_path, Path(exp_abs_path_str))
+                    self.assertEqual(mypath.db_path_str, base_path_str)
+                    self.assertEqual(mypath.db_path, Path(base_path_str))
+                    self.assertTrue(mypath.is_taggable())
+                    self.assertTrue(mypath.db_path_str_is_valid())
 
-    def test_db_path_is_descendant_of_base_path(self):
-        test_data = []
-
-    def test_db_path_is_unrelated_to_base_path(self):
+    @unittest.mock.patch.object(MyPath, "_to_formatted_posix_path_str", autospec=True)
+    def test_db_path_is_descendant_of_base_path(
+        self, mock__to_formatted_posix_path_str
+    ):
         test_data = [
             (
-                None,
-                False,
-                Path("/home/user"),
-                False,
-                None,
-                None,
-                False,
-            ),
-            (
-                "",
-                False,
-                Path("/home/user"),
-                True,
-                "/home/user",
-                "/",
-                True,
-            ),
-            (
-                ".",
-                False,
-                Path("/home/user"),
-                True,
-                "/home/user",
-                "/",
-                True,
-            ),
-            (
-                "/Videos",
-                False,
-                Path("/home/user"),
-                True,
                 "/home/user/Videos",
-                "/Videos",
+                Path("/home/user"),
+                "/home/user/home/user/Videos",
+                "/home/user/Videos",
+            ),
+            (
+                "/home/user/Videos/Tarantino",
+                Path("/home/user"),
+                "/home/user/home/user/Videos/Tarantino",
+                "/home/user/Videos/Tarantino",
+            ),
+        ]
+        for (
+            raw_path,
+            base_path,
+            exp_abs_path_str,
+            exp_db_path_str,
+        ) in test_data:
+            with self.subTest(raw_path=raw_path, base_path=base_path):
+                params.BASE_PATH = base_path
+                for raw_value in [raw_path, Path(raw_path)]:
+                    mock__to_formatted_posix_path_str.reset_mock()
+                    mock__to_formatted_posix_path_str.return_value = Path(
+                        raw_value
+                    ).as_posix()
+                    mypath = MyPath(raw_value, is_abs_path)
+                    if raw_path:
+                        mock__to_formatted_posix_path_str.assert_called()
+                    mypath = MyPath(raw_value, False)
+                    self.assertEqual(mypath.raw_path, raw_value)
+                    self.assertEqual(mypath.abs_path_str, exp_abs_path_str)
+                    self.assertEqual(mypath.abs_path, Path(exp_abs_path_str))
+                    self.assertEqual(mypath.db_path_str, exp_db_path_str)
+                    self.assertEqual(mypath.db_path, Path(exp_db_path_str))
+                    self.assertTrue(mypath.is_taggable())
+                    self.assertTrue(mypath.db_path_str_is_valid())
+
+    @unittest.mock.patch.object(MyPath, "_to_formatted_posix_path_str", autospec=True)
+    def test_db_path_is_unrelated_to_base_path(self, mock__to_formatted_posix_path_str):
+        test_data = [
+            (
+                None,
+                Path("/home/user"),
+                None,
+                None,
+                None,
+                None,
+                False,
+                False,
+            ),
+            (
+                "",
+                Path("/home/user"),
+                None,
+                None,
+                None,
+                None,
+                False,
+                False,
+            ),
+            (
+                ".",
+                Path("/home/user"),
+                None,
+                None,
+                None,
+                None,
+                False,
+                False,
+            ),
+            (
+                "/usr",
+                Path("/home/user"),
+                "/home/user/usr",
+                Path("/home/user/usr"),
+                "/usr",
+                Path("/usr"),
+                True,
                 True,
             ),
             (
-                "/Videos/movies/Star Trek",
-                False,
+                "/usr/bin",
                 Path("/home/user"),
+                "/home/user/usr/bin",
+                Path("/home/user/usr/bin"),
+                "/usr/bin",
+                Path("/usr/bin"),
                 True,
-                "/home/user/Videos/movies/Star Trek",
-                "/Videos/movies/Star Trek",
                 True,
             ),
         ]
+
+        for (
+            raw_path,
+            base_path,
+            exp_abs_path_str,
+            exp_abs_path,
+            exp_db_path_str,
+            exp_db_path,
+            exp_is_taggable,
+            exp_is_valid_db_path_str,
+        ) in test_data:
+            with self.subTest(raw_path=raw_path, base_path=base_path):
+                params.BASE_PATH = base_path
+                for raw_value in (
+                    [raw_path, Path(raw_path)] if raw_path is not None else [raw_path]
+                ):
+                    mock__to_formatted_posix_path_str.reset_mock()
+                    mock__to_formatted_posix_path_str.return_value = Path(
+                        raw_value
+                    ).as_posix()
+                    mypath = MyPath(raw_value, is_abs_path)
+                    if raw_path:
+                        mock__to_formatted_posix_path_str.assert_called()
+                    mypath = MyPath(raw_value, False)
+                    self.assertEqual(mypath.raw_path, raw_value)
+                    self.assertEqual(mypath.abs_path_str, exp_abs_path_str)
+                    self.assertEqual(mypath.abs_path, exp_abs_path)
+                    self.assertEqual(mypath.db_path_str, exp_db_path_str)
+                    self.assertEqual(mypath.db_path, exp_db_path)
+                    self.assertEqual(mypath.is_taggable(), exp_is_taggable)
+                    self.assertEqual(
+                        mypath.db_path_str_is_valid(), exp_is_valid_db_path_str
+                    )
 
     def test__to_formatted_posix_path(self):
         # pylint: disable=W0212

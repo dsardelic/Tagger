@@ -13,7 +13,11 @@ from Tagger import params, settings
 class MyPath:
     def __init__(self, raw_path: Union[Path, str], is_abs_path: bool):
         self.raw_path = raw_path
-        if raw_path is None:
+        if raw_path is None or (
+            # no weird db_paths allowed
+            not is_abs_path
+            and self._to_formatted_posix_path_str(raw_path) in ["", "."]
+        ):
             self.abs_path_str = None
             return
         if is_abs_path or not params.BASE_PATH:
@@ -27,7 +31,7 @@ class MyPath:
     def db_path_str(self) -> Optional[str]:
         if self.abs_path_str is None:
             return None
-        abs_path = Path(self._to_formatted_posix_path_str(self.abs_path_str))
+        abs_path = Path(self.abs_path_str)
         if not params.BASE_PATH:
             return abs_path.as_posix()
         if abs_path == params.BASE_PATH:
