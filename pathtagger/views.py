@@ -25,7 +25,7 @@ class MyPath:
 
     @property
     def db_path_str(self) -> Optional[str]:
-        if self.raw_path is None:
+        if self.abs_path_str is None:
             return None
         abs_path = Path(self._to_formatted_posix_path_str(self.abs_path_str))
         if not params.BASE_PATH:
@@ -37,26 +37,14 @@ class MyPath:
         return None
 
     @property
-    def system_db_path_str(self) -> Optional[str]:
-        if self.raw_path is None:
-            return None
-        return str(self.db_path)
-
-    @property
     def db_path(self) -> Optional[Path]:
-        if self.raw_path is None:
+        if self.db_path_str is None:
             return None
         return Path(self.db_path_str)
 
     @property
-    def system_abs_path_str(self) -> Optional[str]:
-        if self.raw_path is None:
-            return None
-        return str(self.abs_path)
-
-    @property
     def abs_path(self) -> Optional[Path]:
-        if self.raw_path is None:
+        if self.abs_path_str is None:
             return None
         return Path(self.abs_path_str)
 
@@ -84,7 +72,7 @@ def get_extended_dataset(dataset):
     for element in dataset:
         mypath = MyPath(element["path"], False)
         element["abs_path_str"] = mypath.abs_path_str
-        element["system_path_str"] = mypath.system_abs_path_str
+        element["system_path_str"] = str(mypath.abs_path)
         element["db_path_str"] = mypath.db_path_str
         element["path_exists"] = mypath.abs_path.exists()
         element["path_is_dir"] = mypath.abs_path.is_dir()

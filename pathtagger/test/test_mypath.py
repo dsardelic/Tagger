@@ -1,298 +1,109 @@
-import os
 import unittest
-from pathlib import Path, PosixPath, WindowsPath
+from pathlib import Path
 
 from pathtagger.views import MyPath
 from Tagger import params
 
 
 class TestMyPath(unittest.TestCase):
-    def test_attribues_and_properties(self):
+    # TODO: u svim metodama provjeriti da se poziva _to_formatted_posix_path_str!
+
+    def test_no_base_path(self):
         test_data = [
             (
                 None,
                 False,
                 None,
+                None,
                 False,
-                None,
-                None,
-                None,
-                None,
-                None,
-                None,
                 False,
             ),
             (
                 None,
+                True,
+                None,
+                None,
                 False,
-                Path("/home/user"),
-                False,
-                None,
-                None,
-                None,
-                None,
-                None,
-                None,
                 False,
             ),
             (
                 "",
                 False,
-                None,
+                ".",
+                ".",
                 False,
-                ".",
-                Path("."),
-                ".",
-                ".",
-                Path("."),
-                ".",
                 False,
             ),
             (
                 "",
-                False,
-                Path("/home/user"),
                 True,
-                "/home/user",
-                Path("/home/user"),
-                "/home/user",
-                "/",
-                Path("/"),
-                "/",
-                True,
-            ),
-            (
+                ".",
                 ".",
                 False,
-                None,
-                False,
-                ".",
-                Path("."),
-                ".",
-                ".",
-                Path("."),
-                ".",
                 False,
             ),
             (
                 ".",
                 False,
-                Path("/home/user"),
+                ".",
+                ".",
+                False,
+                False,
+            ),
+            (
+                ".",
                 True,
-                "/home/user",
-                Path("/home/user"),
-                "/home/user",
-                "/",
-                Path("/"),
-                "/",
-                True,
+                ".",
+                ".",
+                False,
+                False,
             ),
             (
                 "/",
                 False,
-                None,
+                "/",
+                "/",
                 True,
-                "/",
-                Path("/"),
-                "/",
-                "/",
-                Path("/"),
-                "/",
                 True,
             ),
             (
                 "/",
-                False,
-                Path("/home/user"),
                 True,
-                "/home/user",
-                Path("/home/user"),
-                "/home/user",
                 "/",
-                Path("/"),
                 "/",
                 True,
-            ),
-            (
-                "/Videos",
-                False,
-                None,
-                True,
-                "/Videos",
-                Path("/Videos"),
-                "/Videos",
-                "/Videos",
-                Path("/Videos"),
-                "/Videos",
                 True,
             ),
             (
                 "/Videos",
                 False,
-                Path("/home/user"),
+                "/Videos",
+                "/Videos",
                 True,
-                "/home/user/Videos",
-                Path("/home/user/Videos"),
-                "/home/user/Videos",
-                "/Videos",
-                Path("/Videos"),
-                "/Videos",
                 True,
             ),
             (
-                "Videos/",
-                False,
-                None,
-                True,
-                "/Videos",
-                Path("/Videos"),
-                "/Videos",
-                "/Videos",
-                Path("/Videos"),
                 "/Videos",
                 True,
-            ),
-            (
-                "Videos/",
-                False,
-                Path("/home/user"),
-                True,
-                "/home/user/Videos",
-                Path("/home/user/Videos"),
-                "/home/user/Videos",
                 "/Videos",
-                Path("/Videos"),
                 "/Videos",
                 True,
-            ),
-            (
-                "/Videos/",
-                False,
-                None,
-                True,
-                "/Videos",
-                Path("/Videos"),
-                "/Videos",
-                "/Videos",
-                Path("/Videos"),
-                "/Videos",
-                True,
-            ),
-            (
-                "/Videos/",
-                False,
-                Path("/home/user"),
-                True,
-                "/home/user/Videos",
-                Path("/home/user/Videos"),
-                "/home/user/Videos",
-                "/Videos",
-                Path("/Videos"),
-                "/Videos",
-                True,
-            ),
-            (
-                "//Videos",
-                False,
-                None,
-                True,
-                "/Videos",
-                Path("/Videos"),
-                "/Videos",
-                "/Videos",
-                Path("/Videos"),
-                "/Videos",
-                True,
-            ),
-            (
-                "//Videos",
-                False,
-                Path("/home/user"),
-                True,
-                "/home/user/Videos",
-                Path("/home/user/Videos"),
-                "/home/user/Videos",
-                "/Videos",
-                Path("/Videos"),
-                "/Videos",
-                True,
-            ),
-            (
-                "/Videos//",
-                False,
-                None,
-                True,
-                "/Videos",
-                Path("/Videos"),
-                "/Videos",
-                "/Videos",
-                Path("/Videos"),
-                "/Videos",
-                True,
-            ),
-            (
-                "/Videos//",
-                False,
-                Path("/home/user"),
-                True,
-                "/home/user/Videos",
-                Path("/home/user/Videos"),
-                "/home/user/Videos",
-                "/Videos",
-                Path("/Videos"),
-                "/Videos",
                 True,
             ),
             (
                 "/Videos/movies/Star Trek",
                 False,
-                None,
+                "/Videos/movies/Star Trek",
+                "/Videos/movies/Star Trek",
                 True,
-                "/Videos/movies/Star Trek",
-                Path("/Videos/movies/Star Trek"),
-                "/Videos/movies/Star Trek",
-                "/Videos/movies/Star Trek",
-                Path("/Videos/movies/Star Trek"),
-                "/Videos/movies/Star Trek",
                 True,
             ),
             (
                 "/Videos/movies/Star Trek",
-                False,
-                Path("/home/user"),
-                True,
-                "/home/user/Videos/movies/Star Trek",
-                Path("/home/user/Videos/movies/Star Trek"),
-                "/home/user/Videos/movies/Star Trek",
-                "/Videos/movies/Star Trek",
-                Path("/Videos/movies/Star Trek"),
-                "/Videos/movies/Star Trek",
-                True,
-            ),
-            (
-                "/Videos//movies/Star Trek",
-                False,
-                None,
                 True,
                 "/Videos/movies/Star Trek",
-                Path("/Videos/movies/Star Trek"),
-                "/Videos/movies/Star Trek",
-                "/Videos/movies/Star Trek",
-                Path("/Videos/movies/Star Trek"),
                 "/Videos/movies/Star Trek",
                 True,
-            ),
-            (
-                "/Videos//movies/Star Trek",
-                False,
-                Path("/home/user"),
-                True,
-                "/home/user/Videos/movies/Star Trek",
-                Path("/home/user/Videos/movies/Star Trek"),
-                "/home/user/Videos/movies/Star Trek",
-                "/Videos/movies/Star Trek",
-                Path("/Videos/movies/Star Trek"),
-                "/Videos/movies/Star Trek",
                 True,
             ),
         ]
@@ -300,37 +111,161 @@ class TestMyPath(unittest.TestCase):
         for (
             raw_path,
             is_abs_path,
-            base_path,
-            exp_is_taggable,
             exp_abs_path_str,
-            exp_abs_path,
-            exp_system_abs_path_str,
             exp_db_path_str,
-            exp_db_path,
-            exp_system_db_path_str,
+            exp_is_taggable,
             exp_is_valid_db_path_str,
         ) in test_data:
-            with self.subTest(
-                raw_path=raw_path, is_abs_path=is_abs_path, base_path=base_path
-            ):
-                params.BASE_PATH = base_path
+            with self.subTest(raw_path=raw_path, is_abs_path=is_abs_path):
+                params.BASE_PATH = None
                 for raw_value in (
                     [raw_path, Path(raw_path)] if raw_path is not None else [raw_path]
                 ):
                     mypath = MyPath(raw_value, is_abs_path)
                     self.assertEqual(mypath.raw_path, raw_value)
-                    self.assertEqual(mypath.db_path_str, exp_db_path_str)
-                    self.assertEqual(mypath.db_path, exp_db_path)
-                    self.assertEqual(mypath.system_db_path_str, exp_system_db_path_str)
                     self.assertEqual(mypath.abs_path_str, exp_abs_path_str)
-                    self.assertEqual(mypath.abs_path, exp_abs_path)
-                    self.assertEqual(
-                        mypath.system_abs_path_str, exp_system_abs_path_str
-                    )
+                    self.assertEqual(mypath.db_path_str, exp_db_path_str)
+                    self.assertEqual(mypath.abs_path_str, mypath.db_path_str)
                     self.assertEqual(mypath.is_taggable(), exp_is_taggable)
                     self.assertEqual(
                         mypath.db_path_str_is_valid(), exp_is_valid_db_path_str
                     )
+
+    def test_abs_path_is_ancestor_of_base_path(self):
+        test_data = [
+            (
+                "/",
+                True,
+                Path("/home/user"),
+                False,
+                "/",
+                None,
+                False,
+            ),
+        ]
+
+    def test_abs_path_is_base_path(self):
+        test_data = []
+
+    def test_abs_path_is_descendant_of_base_path(self):
+        test_data = []
+
+    def test_abs_path_is_unrelated_to_base_path(self):
+        test_data = [
+            (
+                None,
+                True,
+                Path("/home/user"),
+                False,
+                None,
+                None,
+                False,
+            ),
+            (
+                "",
+                True,
+                Path("/home/user"),
+                False,
+                ".",
+                None,
+                False,
+            ),
+            (
+                ".",
+                True,
+                Path("/home/user"),
+                False,
+                ".",
+                None,
+                False,
+            ),
+            (
+                "/Videos",
+                True,
+                Path("/home/user"),
+                False,
+                "/Videos",
+                None,
+                False,
+            ),
+            (
+                "/Videos/movies/Star Trek",
+                True,
+                Path("/home/user"),
+                False,
+                "/Videos/movies/Star Trek",
+                None,
+                False,
+            ),
+        ]
+
+    def test_db_path_is_ancestor_of_base_path(self):
+        test_data = [
+            (
+                "/",
+                False,
+                Path("/home/user"),
+                True,
+                "/home/user",
+                "/",
+                True,
+            ),
+        ]
+
+    def test_db_path_is_base_path(self):
+        test_data = []
+
+    def test_db_path_is_descendant_of_base_path(self):
+        test_data = []
+
+    def test_db_path_is_unrelated_to_base_path(self):
+        test_data = [
+            (
+                None,
+                False,
+                Path("/home/user"),
+                False,
+                None,
+                None,
+                False,
+            ),
+            (
+                "",
+                False,
+                Path("/home/user"),
+                True,
+                "/home/user",
+                "/",
+                True,
+            ),
+            (
+                ".",
+                False,
+                Path("/home/user"),
+                True,
+                "/home/user",
+                "/",
+                True,
+            ),
+            (
+                "/Videos",
+                False,
+                Path("/home/user"),
+                True,
+                "/home/user/Videos",
+                "/Videos",
+                True,
+            ),
+            (
+                "/Videos/movies/Star Trek",
+                False,
+                Path("/home/user"),
+                True,
+                "/home/user/Videos/movies/Star Trek",
+                "/Videos/movies/Star Trek",
+                True,
+            ),
+        ]
 
     def test__to_formatted_posix_path(self):
         # pylint: disable=W0212
@@ -339,8 +274,16 @@ class TestMyPath(unittest.TestCase):
             ("dot str", ".", "."),
             ("root", "/", "/"),
             ("leading solidum", "/home/Videos", "/home/Videos"),
+            ("multiple leading solida", "////home/Videos", "/home/Videos"),
             ("trailing solidum", "home/Videos/", "/home/Videos"),
+            ("multiple trailing solida", "home/Videos///", "/home/Videos"),
             ("leading and trailing solidum", "/home/Videos/", "/home/Videos"),
+            (
+                "multiple leading and trailing solida",
+                "///home/Videos///",
+                "/home/Videos",
+            ),
+            ("intermediate solida", "/home//Videos", "/home/Videos"),
         ]
         for description, path, exp_rval in test_data:
             with self.subTest(description=description):
@@ -348,119 +291,3 @@ class TestMyPath(unittest.TestCase):
             path = Path(path)
             with self.subTest(description=description):
                 self.assertEqual(MyPath._to_formatted_posix_path_str(path), exp_rval)
-
-    @unittest.skipUnless(os.name == "posix", "requires Posix")
-    def test_is_allowed_path_posix(self):
-        test_data = [
-            ("no base path", None, "/home/dino/Videos", True),
-            ("base path parent", "/home/dino", "/home/dino/Videos", True),
-            ("is base path", "/home/dino/Videos", "/home/dino/Videos", True),
-            (
-                "base path descendant",
-                "/home/dino/Videos/movies",
-                "/home/dino/Videos",
-                False,
-            ),
-            ("no relation with base path", "/opt", "/home/dino/Videos", False),
-        ]
-
-    @unittest.skipUnless(os.name == "nt", "requires Windows")
-    def test_is_allowed_path_nt(self):
-        test_data = [
-            ("no base path", None, r"C:\tools\eclipse", True),
-            (
-                "base path parent",
-                r"C:\tools",
-                r"C:\tools\eclipse",
-                True,
-            ),
-            (
-                "is base path",
-                r"C:\tools\eclipse",
-                r"C:\tools\eclipse",
-                True,
-            ),
-            (
-                "base path descendant",
-                r"C:\tools\eclipse\plugins",
-                r"C:\tools\eclipse",
-                False,
-            ),
-            (
-                "no relation with base path",
-                r"C:\Windows",
-                r"C:\tools\eclipse",
-                False,
-            ),
-        ]
-
-    @unittest.skipUnless(os.name == "posix", "requires Posix")
-    def test_get_db_path_str_posix(self):
-        test_data = [
-            ("no base path", None, "/home/dino/Videos", "/home/dino/Videos"),
-            ("no relation with base path", "/opt", "/home/dino/Videos", None),
-            (
-                "base path parent",
-                "/home/dino/Videos/movies",
-                "/home/dino/Videos",
-                None,
-            ),
-            ("is base path", "/home/dino/Videos", "/home/dino/Videos", "/"),
-            ("base path descendant", "/home/dino", "/home/dino/Videos", "Videos"),
-        ]
-
-    @unittest.skipUnless(os.name == "nt", "requires Windows")
-    def test_get_db_path_str_nt(self):
-        test_data = [
-            ("no base path", None, r"C:\tools\eclipse", "C:/tools/eclipse"),
-            ("no relation with base path", r"C:\Windows", r"C:\tools\eclipse", None),
-            (
-                "base path parent",
-                r"C:\tools\eclipse\plugins",
-                r"C:\tools\eclipse",
-                None,
-            ),
-            (
-                "is base path",
-                r"C:\tools\eclipse",
-                r"C:\tools\eclipse",
-                "C:/tools/eclipse",
-            ),
-            ("base path descendant", r"C:\tools", r"C:\tools\eclipse", "eclipse"),
-        ]
-
-    @unittest.skipUnless(os.name == "posix", "requires Posix")
-    def test_join_with_base_path_posix(self):
-        test_data = [
-            ("no base path", None, PosixPath("Joinee"), PosixPath("Joinee")),
-            (
-                "base path and root joinee",
-                "/home/dino",
-                PosixPath("/"),
-                PosixPath("/home/dino"),
-            ),
-            (
-                "base path and non-root joinee",
-                "/home/dino",
-                PosixPath("Joinee"),
-                PosixPath("/home/dino/Joinee"),
-            ),
-        ]
-
-    @unittest.skipUnless(os.name == "nt", "requires Windows")
-    def test_join_with_base_path_nt(self):
-        test_data = [
-            ("no base path", None, WindowsPath("Joinee"), WindowsPath("Joinee")),
-            (
-                "base path and root joinee",
-                r"C:\tools",
-                WindowsPath("/"),
-                WindowsPath(r"C:\tools"),
-            ),
-            (
-                "base path and non-root joinee",
-                r"C:\tools",
-                WindowsPath("Joinee"),
-                WindowsPath(r"C:\tools\Joinee"),
-            ),
-        ]
