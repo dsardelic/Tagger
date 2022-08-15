@@ -78,8 +78,11 @@ class Test(SimpleTestCase):
             self.assertEqual(views.get_drive_root_dirs(), [])
 
     def test_mapping_details_get(self):
+        mapping_id = 4
         response = self.client.get(
-            reverse(f"{urls.app_name}:mapping_details", kwargs={"mapping_id": 4})
+            reverse(
+                f"{urls.app_name}:mapping_details", kwargs={"mapping_id": mapping_id}
+            )
         )
         self.assertEqual(response.status_code, 200)
         self.assertTrue(
@@ -94,19 +97,25 @@ class Test(SimpleTestCase):
         )
 
     @parameterized.expand(
-        [("path missing", "", 0), ("path not missing", "/new_db_path_str", 1)]
+        [
+            ("path missing", None, False),
+            ("path empty", "", False),
+            ("dot path", ".", False),
+            ("path non-empty", "/new_db_path_str", True),
+        ]
     )
     @unittest.mock.patch.object(views.db, "update_mapping")
     def test_mapping_details_post(
         self, _, new_db_path_str, exp_update_mapping_called, mock_update_mapping
     ):
         mapping_id = 1
+        data = {"path": new_db_path_str} if new_db_path_str else {}
         response = self.client.post(
             reverse(
                 f"{urls.app_name}:mapping_details",
                 kwargs={"mapping_id": mapping_id},
             ),
-            {"path": new_db_path_str},
+            {**data},
             follow=True,
         )
         self.assertRedirects(response, reverse(f"{urls.app_name}:mappings_list"))
@@ -117,7 +126,8 @@ class Test(SimpleTestCase):
 
     @parameterized.expand(
         [
-            ("missing or empty string", "", False),
+            ("path missing", None, False),
+            ("path empty", "", False),
             ("dot path", ".", False),
             ("mapping does not exist yet", "/home/dino/Pictures", True),
             ("mapping already exists", "/home/dino/Downloads", False),
@@ -131,8 +141,9 @@ class Test(SimpleTestCase):
         exp_insert_mapping_called,
         mock_insert_mapping,
     ):
+        data = {"path": db_path_str} if db_path_str else {}
         response = self.client.post(
-            reverse(f"{urls.app_name}:add_mapping"), {"path": db_path_str}, follow=True
+            reverse(f"{urls.app_name}:add_mapping"), {**data}, follow=True
         )
         self.assertRedirects(response, reverse(f"{urls.app_name}:mappings_list"))
         if exp_insert_mapping_called:
@@ -141,7 +152,7 @@ class Test(SimpleTestCase):
             mock_insert_mapping.assert_not_called()
 
     def test_parse_tag_ids_to_append_and_remove(self):
-        querydict = {
+        data = {
             "tag_3": "remove",
             "tag_4": "invalid action",
             "tag_2": "append",
@@ -149,13 +160,14 @@ class Test(SimpleTestCase):
             "tag_1": "append",
         }
         tag_ids_to_append, tag_ids_to_remove = views.parse_tag_ids_to_append_and_remove(
-            querydict
+            data
         )
         self.assertEqual(sorted(tag_ids_to_append), [1, 2])
         self.assertEqual(sorted(tag_ids_to_remove), [3])
 
     @parameterized.expand(
         [
+            ("None", None, 0),
             ("empty", "", 0),
             ("single comma", ",", 0),
             ("regular one", "new tag 1", 1),
@@ -174,7 +186,7 @@ class Test(SimpleTestCase):
             views, "delete_mappings", return_value=HttpResponse()
         ) as mock_delete_mappings:
             _ = self.client.post(
-                reverse(f"{urls.app_name}:edit_mappings"), {"action_delete": "foo"}
+                reverse(f"{urls.app_name}:edit_mappings"), {"action_delete": "_"}
             )
         mock_delete_mappings.assert_called_once()
 
@@ -258,13 +270,14 @@ class Test(SimpleTestCase):
         else:
             mock_delete_mappings.assert_not_called()
 
-    @parameterized.expand([("all", 5, 8), ("existent", 4, 6), ("nonexistent", 1, 2)])
+    @parameterized.expand(
+        [(None, 5, 8), ("all", 5, 8), ("existent", 4, 6), ("nonexistent", 1, 2)]
+    )
     def test_mappings_list(
         self, path_type, exp_mappings_table_row_count, exp_tag_count
     ):
-        response = self.client.get(
-            reverse(f"{urls.app_name}:mappings_list"), {"path_type": path_type}
-        )
+        data = {"path_type": path_type} if path_type else {}
+        response = self.client.get(reverse(f"{urls.app_name}:mappings_list"), {**data})
         self.assertEqual(response.status_code, 200)
         self.assertTrue(
             f"{urls.app_name}/mappings_list.html"
@@ -280,7 +293,7 @@ class Test(SimpleTestCase):
         self.assertEqual(len(soup.select_one("#tags_table_body").select(".tag")), 3)
 
         db_operations.DB.purge_table("_default")
-        response = self.client.get(reverse(f"{urls.app_name}:mappings_list"))
+        response = self.client.get(reverse(f"{urls.app_name}:mappings_list"), {**data})
         self.assertEqual(response.status_code, 200)
         self.assertEqual(
             _row_count(BeautifulSoup(response.content, "lxml"), "mappings_table_body"),
@@ -289,8 +302,9 @@ class Test(SimpleTestCase):
         self.assertEqual(len(soup.select_one("#tags_table_body").select(".tag")), 3)
 
     def test_tag_details_get(self):
+        tag_id = 2
         response = self.client.get(
-            reverse(f"{urls.app_name}:tag_details", kwargs={"tag_id": 2})
+            reverse(f"{urls.app_name}:tag_details", kwargs={"tag_id": tag_id})
         )
         self.assertEqual(response.status_code, 200)
         self.assertTrue(
@@ -350,7 +364,6 @@ class Test(SimpleTestCase):
     def test_add_tag(
         self, _, name, color, exp_color, exp_insert_tag_called, mock_insert_tag
     ):
-        # TODO: data u svim POST requestima
         data = {"name": name, "color": color}
         for param in ["name", "color"]:
             if data[param] is None:
@@ -448,21 +461,25 @@ class Test(SimpleTestCase):
 
     @parameterized.expand(
         [
-            ("no path, non-ajax", None, False, None, None),
-            ("no path, ajax", None, True, None, {"status": "nok"}),
-            ("empty path, non-ajax", "", False, None, None),
-            ("empty path, ajax", "", True, None, {"status": "nok"}),
+            ("no path, non-ajax", None, False, False, None, None),
+            ("no path, ajax", None, True, None, False, {"status": "nok"}),
+            ("empty path, non-ajax", "", False, None, False, None),
+            ("empty path, ajax", "", True, None, False, {"status": "nok"}),
+            ("dot path, non-ajax", ".", False, None, False, None),
+            ("dot path, ajax", ".", True, None, False, {"status": "nok"}),
             (
                 "non-empty path, non-ajax, currently not favorite",
                 "/home/dino",
                 False,
                 False,
+                True,
                 None,
             ),
             (
                 "non-empty path, non-ajax, currently favorite",
                 "/home/dino",
                 False,
+                True,
                 True,
                 None,
             ),
@@ -471,11 +488,13 @@ class Test(SimpleTestCase):
                 "/home/dino",
                 True,
                 False,
+                True,
                 {"status": "ok", "is_favorite": "True"},
             ),
             (
                 "non-empty path, ajax, currently favorite",
                 "/home/dino",
+                True,
                 True,
                 True,
                 {"status": "ok", "is_favorite": "False"},
@@ -488,15 +507,16 @@ class Test(SimpleTestCase):
     def test_toggle_favorite_path(
         self,
         _,
-        path_str,
+        abs_path_str,
         is_ajax_call,
         prev_is_favorite,
+        exp_insert_or_delete_called,
         exp_json_response_dict,
         mock_get_favorite_path,
         mock_insert_favorite_path,
         mock_delete_favorite_path,
     ):
-        data = {"path": path_str} if path_str else {}
+        data = {"path": abs_path_str} if abs_path_str else {}
         headers = {"HTTP_X_REQUESTED_WITH": "XMLHttpRequest"} if is_ajax_call else {}
         mock_get_favorite_path.return_value = prev_is_favorite
         response = self.client.post(
@@ -505,7 +525,7 @@ class Test(SimpleTestCase):
             follow=True,
             **headers,
         )
-        if path_str:
+        if exp_insert_or_delete_called:
             if prev_is_favorite:
                 mock_insert_favorite_path.assert_not_called()
                 mock_delete_favorite_path.assert_called_once()

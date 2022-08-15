@@ -17,7 +17,6 @@ class TestMyPath(unittest.TestCase):
                 None,
                 None,
                 False,
-                False,
             ),
             (
                 None,
@@ -27,7 +26,6 @@ class TestMyPath(unittest.TestCase):
                 None,
                 None,
                 False,
-                False,
             ),
             (
                 "",
@@ -36,7 +34,6 @@ class TestMyPath(unittest.TestCase):
                 None,
                 None,
                 None,
-                False,
                 False,
             ),
             (
@@ -47,7 +44,6 @@ class TestMyPath(unittest.TestCase):
                 ".",
                 Path("."),
                 False,
-                False,
             ),
             (
                 ".",
@@ -56,7 +52,6 @@ class TestMyPath(unittest.TestCase):
                 None,
                 None,
                 None,
-                False,
                 False,
             ),
             (
@@ -67,7 +62,6 @@ class TestMyPath(unittest.TestCase):
                 ".",
                 Path("."),
                 False,
-                False,
             ),
             (
                 "/",
@@ -77,7 +71,6 @@ class TestMyPath(unittest.TestCase):
                 "/",
                 Path("/"),
                 True,
-                True,
             ),
             (
                 "/",
@@ -86,7 +79,6 @@ class TestMyPath(unittest.TestCase):
                 Path("/"),
                 "/",
                 Path("/"),
-                True,
                 True,
             ),
             (
@@ -97,7 +89,6 @@ class TestMyPath(unittest.TestCase):
                 "/Videos",
                 Path("/Videos"),
                 True,
-                True,
             ),
             (
                 "/Videos",
@@ -106,7 +97,6 @@ class TestMyPath(unittest.TestCase):
                 Path("/Videos"),
                 "/Videos",
                 Path("/Videos"),
-                True,
                 True,
             ),
             (
@@ -117,7 +107,6 @@ class TestMyPath(unittest.TestCase):
                 "/Videos/movies/Tarantino",
                 Path("/Videos/movies/Tarantino"),
                 True,
-                True,
             ),
             (
                 "/Videos/movies/Tarantino",
@@ -126,7 +115,6 @@ class TestMyPath(unittest.TestCase):
                 Path("/Videos/movies/Tarantino"),
                 "/Videos/movies/Tarantino",
                 Path("/Videos/movies/Tarantino"),
-                True,
                 True,
             ),
         ]
@@ -138,7 +126,6 @@ class TestMyPath(unittest.TestCase):
             exp_abs_path,
             exp_db_path_str,
             exp_db_path,
-            exp_is_taggable,
             exp_is_valid_db_path_str,
         ) in test_data:
             with self.subTest(raw_path=raw_path, is_abs_path=is_abs_path):
@@ -152,9 +139,8 @@ class TestMyPath(unittest.TestCase):
                     self.assertEqual(mypath.abs_path, exp_abs_path)
                     self.assertEqual(mypath.db_path_str, exp_db_path_str)
                     self.assertEqual(mypath.db_path, exp_db_path)
-                    self.assertEqual(mypath.is_taggable(), exp_is_taggable)
                     self.assertEqual(
-                        mypath.db_path_str_is_valid(), exp_is_valid_db_path_str
+                        mypath.is_valid_db_path_str, exp_is_valid_db_path_str
                     )
 
     def test_abs_path_is_ancestor_of_base_path(self):
@@ -177,8 +163,7 @@ class TestMyPath(unittest.TestCase):
                     self.assertEqual(mypath.abs_path, exp_abs_path)
                     self.assertIsNone(mypath.db_path_str)
                     self.assertIsNone(mypath.db_path)
-                    self.assertFalse(mypath.is_taggable())
-                    self.assertFalse(mypath.db_path_str_is_valid())
+                    self.assertFalse(mypath.is_valid_db_path_str)
 
     def test_abs_path_is_base_path(self):
         base_path_strs = ["/", "/home", "/home/user"]
@@ -192,8 +177,7 @@ class TestMyPath(unittest.TestCase):
                     self.assertEqual(mypath.abs_path, Path(base_path_str))
                     self.assertEqual(mypath.db_path_str, "/")
                     self.assertEqual(mypath.db_path, Path("/"))
-                    self.assertTrue(mypath.is_taggable())
-                    self.assertTrue(mypath.db_path_str_is_valid())
+                    self.assertTrue(mypath.is_valid_db_path_str)
 
     def test_abs_path_is_descendant_of_base_path(self):
         test_data = [
@@ -220,8 +204,7 @@ class TestMyPath(unittest.TestCase):
                     self.assertEqual(mypath.abs_path, Path(exp_abs_path_str))
                     self.assertEqual(mypath.db_path_str, exp_db_path_str)
                     self.assertEqual(mypath.db_path, Path(exp_db_path_str))
-                    self.assertTrue(mypath.is_taggable())
-                    self.assertTrue(mypath.db_path_str_is_valid())
+                    self.assertTrue(mypath.is_valid_db_path_str)
 
     def test_abs_path_is_unrelated_to_base_path(self):
         test_data = [
@@ -274,8 +257,7 @@ class TestMyPath(unittest.TestCase):
                     self.assertEqual(mypath.abs_path, exp_abs_path)
                     self.assertIsNone(mypath.db_path_str)
                     self.assertIsNone(mypath.db_path)
-                    self.assertFalse(mypath.is_taggable())
-                    self.assertFalse(mypath.db_path_str_is_valid())
+                    self.assertFalse(mypath.is_valid_db_path_str)
 
     def test_db_path_is_ancestor_of_base_path(self):
         test_data = [
@@ -306,8 +288,7 @@ class TestMyPath(unittest.TestCase):
                     self.assertEqual(mypath.abs_path, exp_abs_path)
                     self.assertEqual(mypath.db_path_str, exp_db_path_str)
                     self.assertEqual(mypath.db_path, exp_db_path)
-                    self.assertTrue(mypath.is_taggable())
-                    self.assertTrue(mypath.db_path_str_is_valid())
+                    self.assertTrue(mypath.is_valid_db_path_str)
 
     def test_db_path_is_base_path(self):
         test_data = [
@@ -325,8 +306,7 @@ class TestMyPath(unittest.TestCase):
                     self.assertEqual(mypath.abs_path, Path(exp_abs_path_str))
                     self.assertEqual(mypath.db_path_str, base_path_str)
                     self.assertEqual(mypath.db_path, Path(base_path_str))
-                    self.assertTrue(mypath.is_taggable())
-                    self.assertTrue(mypath.db_path_str_is_valid())
+                    self.assertTrue(mypath.is_valid_db_path_str)
 
     def test_db_path_is_descendant_of_base_path(self):
         test_data = [
@@ -358,8 +338,7 @@ class TestMyPath(unittest.TestCase):
                     self.assertEqual(mypath.abs_path, Path(exp_abs_path_str))
                     self.assertEqual(mypath.db_path_str, exp_db_path_str)
                     self.assertEqual(mypath.db_path, Path(exp_db_path_str))
-                    self.assertTrue(mypath.is_taggable())
-                    self.assertTrue(mypath.db_path_str_is_valid())
+                    self.assertTrue(mypath.is_valid_db_path_str)
 
     def test_db_path_is_unrelated_to_base_path(self):
         test_data = [
@@ -371,7 +350,6 @@ class TestMyPath(unittest.TestCase):
                 None,
                 None,
                 False,
-                False,
             ),
             (
                 "",
@@ -380,7 +358,6 @@ class TestMyPath(unittest.TestCase):
                 None,
                 None,
                 None,
-                False,
                 False,
             ),
             (
@@ -391,7 +368,6 @@ class TestMyPath(unittest.TestCase):
                 None,
                 None,
                 False,
-                False,
             ),
             (
                 "/usr",
@@ -401,7 +377,6 @@ class TestMyPath(unittest.TestCase):
                 "/usr",
                 Path("/usr"),
                 True,
-                True,
             ),
             (
                 "/usr/bin",
@@ -410,7 +385,6 @@ class TestMyPath(unittest.TestCase):
                 Path("/home/user/usr/bin"),
                 "/usr/bin",
                 Path("/usr/bin"),
-                True,
                 True,
             ),
         ]
@@ -422,7 +396,6 @@ class TestMyPath(unittest.TestCase):
             exp_abs_path,
             exp_db_path_str,
             exp_db_path,
-            exp_is_taggable,
             exp_is_valid_db_path_str,
         ) in test_data:
             with self.subTest(raw_path=raw_path, base_path=base_path):
@@ -436,9 +409,8 @@ class TestMyPath(unittest.TestCase):
                     self.assertEqual(mypath.abs_path, exp_abs_path)
                     self.assertEqual(mypath.db_path_str, exp_db_path_str)
                     self.assertEqual(mypath.db_path, exp_db_path)
-                    self.assertEqual(mypath.is_taggable(), exp_is_taggable)
                     self.assertEqual(
-                        mypath.db_path_str_is_valid(), exp_is_valid_db_path_str
+                        mypath.is_valid_db_path_str, exp_is_valid_db_path_str
                     )
 
     def test__to_formatted_posix_path(self):

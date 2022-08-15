@@ -53,14 +53,8 @@ class MyPath:
             return None
         return Path(self.abs_path_str)
 
-    def is_taggable(self) -> bool:
-        return self.abs_path_str not in (None, ".") and (
-            not params.BASE_PATH
-            or self.abs_path == params.BASE_PATH
-            or params.BASE_PATH in self.abs_path.parents
-        )
-
-    def db_path_str_is_valid(self) -> bool:
+    @property
+    def is_valid_db_path_str(self) -> bool:
         return self.db_path_str not in (None, ".")
 
     @staticmethod
@@ -106,7 +100,7 @@ def get_drive_root_dirs():
 def mapping_details(request, mapping_id):
     if request.method == "POST":
         mypath = MyPath(request.POST.get("path"), False)
-        if mypath.db_path_str_is_valid():
+        if mypath.is_valid_db_path_str:
             db.update_mapping(mapping_id, mypath.db_path_str)
         return redirect("pathtagger:mappings_list")
     return render(
@@ -118,7 +112,7 @@ def mapping_details(request, mapping_id):
 
 def add_mapping(request):
     mypath = MyPath(request.POST.get("path"), True)
-    if mypath.db_path_str_is_valid() and not db.get_mapping_by_path(mypath.db_path_str):
+    if mypath.is_valid_db_path_str and not db.get_mapping_by_path(mypath.db_path_str):
         db.insert_mapping(mypath.db_path_str, [])
     return redirect("pathtagger:mappings_list")
 
@@ -295,7 +289,7 @@ def path_details(request, abs_path_str):
             "path_children": path_children,
             "tags": db.get_all_tags(),
             "drive_root_dirs": get_drive_root_dirs(),
-            "is_tagging_allowed": MyPath(path, True).is_taggable(),
+            "is_tagging_allowed": MyPath(path, True).is_valid_db_path_str,
         },
     )
 
@@ -322,7 +316,7 @@ def edit_path_tags(request):
 
 def toggle_favorite_path(request):
     mypath = MyPath(request.POST.get("path"), True)
-    if mypath.db_path_str_is_valid():
+    if mypath.is_valid_db_path_str:
         if db.get_favorite_path(mypath.db_path_str):
             db.delete_favorite_path(mypath.db_path_str)
             is_favorite = False
