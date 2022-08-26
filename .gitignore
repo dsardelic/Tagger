@@ -102,6 +102,10 @@ ENV/
 
 # Eclipse stuff
 .project
+.settings/
 
 # PyDev stuff
 .pydevproject
+
+#VS Code stuff
+.vscode/
