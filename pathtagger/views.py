@@ -1,6 +1,6 @@
 import os
 from pathlib import Path, PosixPath
-from typing import Optional, Union
+from typing import Dict, List, Optional, Union
 from urllib.parse import quote
 
 from django.http import JsonResponse
@@ -65,6 +65,15 @@ class MyPath:
         if isinstance(path, PosixPath):
             return "/" + path.as_posix().strip("/")
         return MyPath(path, True).abs_path_str
+
+    def get_children(self) -> List["MyPath"]:
+        return [
+            MyPath(child_raw_path, True)
+            for child_raw_path in sorted(
+                list(self.abs_path.glob("*")),
+                key=lambda x: (1 - x.is_dir(), str(x).upper()),
+            )
+        ]
 
 
 def get_extended_dataset(dataset):
@@ -241,55 +250,59 @@ def remove_tag_from_mappings(request, tag_id):
     return redirect("pathtagger:tag_details", tag_id=tag_id)
 
 
+def mypath_tokens(mypath: MyPath) -> List[Dict[str, str]]:
+    if not mypath.abs_path:
+        return []
+    mypath_parents = list(reversed(mypath.abs_path.parents))
+    if mypath.abs_path.is_dir():
+        mypath_parents.append(mypath.abs_path)
+    return [
+        {"name": part, "path_str": parent.as_posix()}
+        for part, parent in zip(mypath.abs_path.parts, mypath_parents)
+    ]
+
+
+def mypath_children_data(mypath: MyPath) -> List[Dict[str, str]]:
+    if not mypath.abs_path or not mypath.abs_path.is_dir():
+        return []
+    return [
+        {
+            "path_str": mypath_child.abs_path_str,
+            "db_path_str": mypath_child.db_path_str,
+            "name": mypath_child.abs_path.name,
+            "is_dir": mypath_child.abs_path.is_dir(),
+            "tags": (
+                [
+                    db.get_tag_by_id(int(mapping_tag_id))
+                    for mapping_tag_id in mapping["tag_ids"]
+                ]
+                if (mapping := db.get_mapping_by_path(mypath_child.db_path_str))
+                and mapping.get("tag_ids", [])
+                else []
+            ),
+        }
+        for mypath_child in mypath.get_children()
+    ]
+
+
 def path_details(request, abs_path_str):
-    path = Path(abs_path_str)
-    path_tokens = []
-    path_children = []
-    if path.exists():
-        path_parents = list(reversed(path.parents))
-        if path.is_dir():
-            path_parents.append(path)
-        path_tokens = [
-            {"name": part, "path_str": parent.as_posix()}
-            for part, parent in zip(path.parts, path_parents)
-        ]
-        if path.is_dir():
-            path_children = [
-                {
-                    "path_str": path_child.as_posix(),
-                    "db_path_str": MyPath(path_child, True).db_path_str,
-                    "name": path_child.name,
-                    "is_dir": path_child.is_dir(),
-                }
-                for path_child in sorted(
-                    list(path.glob("*")), key=lambda x: (1 - x.is_dir(), str(x).upper())
-                )
-            ]
-            for path_child in path_children:
-                mapping = db.get_mapping_by_path(path_child["db_path_str"])
-                if mapping and mapping.get("tag_ids", []):
-                    path_child["tags"] = [
-                        db.get_tag_by_id(int(mapping_tag_id))
-                        for mapping_tag_id in mapping["tag_ids"]
-                    ]
+    mypath = MyPath(abs_path_str, True)
     return render(
         request,
         "pathtagger/path_details.html",
         {
-            "path_str": abs_path_str,
-            "system_path_str": str(path),
-            "ajax_path_str": quote(abs_path_str),
-            "is_root_path": path.anchor == str(path),
-            "path_exists": path.exists(),
-            "path_is_favorite": bool(
-                db.get_favorite_path(MyPath(path, True).db_path_str)
-            ),
-            "path_parent": path.parent.as_posix(),
-            "path_tokens": path_tokens,
-            "path_children": path_children,
+            "path_str": mypath.abs_path_str,
+            "system_path_str": str(mypath.abs_path),
+            "ajax_path_str": quote(mypath.abs_path_str),
+            "is_root_path": mypath.abs_path.anchor == str(mypath.abs_path),
+            "path_exists": mypath.abs_path.exists(),
+            "path_is_favorite": bool(db.get_favorite_path(mypath.db_path_str)),
+            "path_parent": mypath.abs_path.parent.as_posix(),
+            "path_tokens": mypath_tokens(mypath),
+            "path_children": mypath_children_data(mypath),
             "tags": db.get_all_tags(),
             "drive_root_dirs": get_drive_root_dirs(),
-            "is_tagging_allowed": MyPath(path, True).is_valid_db_path_str,
+            "is_tagging_allowed": mypath.is_valid_db_path_str,
         },
     )
 

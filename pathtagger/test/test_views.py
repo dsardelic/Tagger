@@ -3,6 +3,7 @@ import unittest.mock
 from ast import literal_eval
 from pathlib import Path
 from tempfile import NamedTemporaryFile
+from unittest.mock import call
 
 from bs4 import BeautifulSoup
 from django.apps import apps
@@ -452,6 +453,147 @@ class Test(SimpleTestCase):
         mock_remove_tags_from_mappings.assert_called_once_with(
             [tag_id], exp_mapping_ids
         )
+
+    @parameterized.expand(
+        [
+            (MyPath(None, True), False, False, []),
+            (MyPath("/", True), True, True, [{"name": "/", "path_str": "/"}]),
+            (
+                MyPath("/home", True),
+                True,
+                True,
+                [
+                    {"name": "/", "path_str": "/"},
+                    {"name": "home", "path_str": "/home"},
+                ],
+            ),
+            (
+                MyPath("/home", True),
+                True,
+                False,
+                [{"name": "/", "path_str": "/"}],
+            ),
+            (
+                MyPath("/home", True),
+                False,
+                False,
+                [{"name": "/", "path_str": "/"}],
+            ),
+            (
+                MyPath("/home/dino", True),
+                True,
+                True,
+                [
+                    {"name": "/", "path_str": "/"},
+                    {"name": "home", "path_str": "/home"},
+                    {"name": "dino", "path_str": "/home/dino"},
+                ],
+            ),
+            (
+                MyPath("/home/dino", True),
+                True,
+                False,
+                [
+                    {"name": "/", "path_str": "/"},
+                    {"name": "home", "path_str": "/home"},
+                ],
+            ),
+            (
+                MyPath("/home/dino", True),
+                False,
+                False,
+                [
+                    {"name": "/", "path_str": "/"},
+                    {"name": "home", "path_str": "/home"},
+                ],
+            ),
+        ]
+    )
+    @unittest.mock.patch.object(views.Path, "is_dir")
+    @unittest.mock.patch.object(views.Path, "exists")
+    @unittest.skipUnless(os.name == "posix", "requires Posix")
+    def test_mypath_tokens(
+        self, mypath, act_exists, act_is_dir, exp_tokens, mock_exists, mock_is_dir
+    ):
+        mock_exists.return_value = act_exists
+        mock_is_dir.return_value = act_is_dir
+        self.assertEqual(views.mypath_tokens(mypath), exp_tokens)
+
+    @parameterized.expand(
+        [
+            (MyPath(None, True), False, [], []),
+            (
+                MyPath("/", True),
+                True,
+                [
+                    {
+                        "path_str": "/Downloads",
+                        "db_path_str": "/Downloads",
+                        "name": "Downloads",
+                    },
+                    {
+                        "path_str": "/.bashrc",
+                        "db_path_str": "/.bashrc",
+                        "name": ".bashrc",
+                    },
+                ],
+                [],
+            ),
+            (
+                MyPath("/home/dino", True),
+                True,
+                [
+                    {
+                        "path_str": "/home/dino/Downloads",
+                        "db_path_str": "/home/dino/Downloads",
+                        "name": "Downloads",
+                    },
+                    {
+                        "path_str": "/home/dino/.bashrc",
+                        "db_path_str": "/home/dino/.bashrc",
+                        "name": ".bashrc",
+                    },
+                ],
+                [1, 2, 3],
+            ),
+            (
+                MyPath("/home/dino/Downloads", True),
+                False,
+                [],
+                [],
+            ),
+        ]
+    )
+    @unittest.mock.patch.object(views.MyPath, "get_children")
+    @unittest.mock.patch.object(views.db, "get_tag_by_id")
+    def test_mypath_children_data(
+        self,
+        mypath,
+        is_dir,
+        partial_exp_data,
+        exp_tag_ids,
+        mock_get_tag_by_id,
+        mock_get_children,
+    ):
+        if is_dir:
+            mock_get_children.return_value = [
+                MyPath(mypath.abs_path / "Downloads", True),
+                MyPath(mypath.abs_path / ".bashrc", True),
+            ]
+        else:
+            mock_get_children.return_value = []
+        act_data = views.mypath_children_data(mypath)
+        if not act_data:
+            self.assertEqual(act_data, partial_exp_data)
+        else:
+            for act_item, exp_item in zip(act_data, partial_exp_data):
+                self.assertEqual(act_item["path_str"], exp_item["path_str"])
+                self.assertEqual(act_item["db_path_str"], exp_item["db_path_str"])
+                self.assertEqual(act_item["name"], exp_item["name"])
+                if exp_tag_ids:
+                    mock_get_tag_by_id.assert_has_calls(
+                        [call(exp_tag_id) for exp_tag_id in exp_tag_ids]
+                    )
 
     def test_path_details(self):
         ...

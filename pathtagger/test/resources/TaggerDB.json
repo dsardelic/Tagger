@@ -1,7 +1,7 @@
 {
     "_default": {
         "1": {
-            "path": "/home/dino/Musik",
+            "path": "/home/dino/Music",
             "tag_ids": [
                 "1"
             ]
@@ -13,7 +13,7 @@
             ]
         },
         "3": {
-            "path": "/home/dino/Dokumente",
+            "path": "/home/dino/Documents",
             "tag_ids": [
                 "3"
             ]
@@ -25,7 +25,7 @@
             ]
         },
         "5": {
-            "path": "/home/dino/Downloads/unfinished",
+            "path": "/home/dino/Documents/ViberDownloads",
             "tag_ids": [
                 "1", "2"
             ]
@@ -33,7 +33,7 @@
     },
     "favorite_paths": {
         "1": {
-            "path": "/home/dino/Musik"
+            "path": "/home/dino/Music"
         }
     },
     "tags": {
