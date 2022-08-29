@@ -18,7 +18,7 @@ from pathtagger.views import MyPath
 from Tagger import params, settings
 
 
-def _row_count(soup, element_id):
+def _table_row_count(soup, element_id):
     elements = soup.select(f"#{element_id}")
     if not elements:
         # element does not exist
@@ -91,7 +91,7 @@ class Test(SimpleTestCase):
             in [template.name for template in response.templates]
         )
         self.assertEqual(
-            _row_count(
+            _table_row_count(
                 BeautifulSoup(response.content, "lxml"), "mapping_tags_table_body"
             ),
             3,
@@ -286,7 +286,7 @@ class Test(SimpleTestCase):
         )
         soup = BeautifulSoup(response.content, "lxml")
         self.assertEqual(
-            _row_count(soup, "mappings_table_body"), exp_mappings_table_row_count
+            _table_row_count(soup, "mappings_table_body"), exp_mappings_table_row_count
         )
         self.assertEqual(
             len(soup.select_one("#mappings_table_body").select(".tag")), exp_tag_count
@@ -297,7 +297,9 @@ class Test(SimpleTestCase):
         response = self.client.get(reverse(f"{urls.app_name}:mappings_list"), {**data})
         self.assertEqual(response.status_code, 200)
         self.assertEqual(
-            _row_count(BeautifulSoup(response.content, "lxml"), "mappings_table_body"),
+            _table_row_count(
+                BeautifulSoup(response.content, "lxml"), "mappings_table_body"
+            ),
             -1,
         )
         self.assertEqual(len(soup.select_one("#tags_table_body").select(".tag")), 3)
@@ -313,7 +315,9 @@ class Test(SimpleTestCase):
             in [template.name for template in response.templates]
         )
         self.assertEqual(
-            _row_count(BeautifulSoup(response.content, "lxml"), "mappings_table_body"),
+            _table_row_count(
+                BeautifulSoup(response.content, "lxml"), "mappings_table_body"
+            ),
             3,
         )
 
@@ -415,14 +419,20 @@ class Test(SimpleTestCase):
             in [template.name for template in response.templates]
         )
         self.assertEqual(
-            _row_count(BeautifulSoup(response.content, "lxml"), "tags_table_body"), 3
+            _table_row_count(
+                BeautifulSoup(response.content, "lxml"), "tags_table_body"
+            ),
+            3,
         )
 
         db_operations.DB.purge_tables()
         response = self.client.get(reverse(f"{urls.app_name}:tags_list"))
         self.assertEqual(response.status_code, 200)
         self.assertEqual(
-            _row_count(BeautifulSoup(response.content, "lxml"), "tags_table_body"), -1
+            _table_row_count(
+                BeautifulSoup(response.content, "lxml"), "tags_table_body"
+            ),
+            -1,
         )
 
     @parameterized.expand(
@@ -595,8 +605,212 @@ class Test(SimpleTestCase):
                         [call(exp_tag_id) for exp_tag_id in exp_tag_ids]
                     )
 
-    def test_path_details(self):
-        ...
+    @parameterized.expand(
+        [
+            (
+                MyPath(None, True),
+                None,
+                False,
+                False,
+                False,
+                False,
+                False,
+                None,
+                None,
+                None,
+            ),
+            (
+                MyPath("no_anchor", True),
+                None,
+                False,
+                False,
+                False,
+                False,
+                False,
+                None,
+                None,
+                None,
+            ),
+            (MyPath("/", True), None, True, True, True, True, False, 1, 0, False),
+            (MyPath("/home", True), None, True, True, True, True, True, 2, 0, False),
+            (
+                MyPath("/home/nonexistent_path", True),
+                None,
+                False,
+                False,
+                False,
+                False,
+                False,
+                None,
+                None,
+                None,
+            ),
+            (
+                MyPath("/home/dino", True),
+                None,
+                True,
+                True,
+                True,
+                True,
+                True,
+                3,
+                4,
+                False,
+            ),
+            (
+                MyPath("/home/dino", True),
+                None,
+                True,
+                True,
+                False,
+                False,
+                True,
+                3,
+                0,
+                False,
+            ),
+            (
+                MyPath("/home/dino", True),
+                None,
+                True,
+                False,
+                False,
+                False,
+                True,
+                2,
+                None,
+                False,
+            ),
+            (
+                MyPath("/home/dino/Music", True),
+                None,
+                True,
+                True,
+                False,
+                False,
+                True,
+                4,
+                0,
+                True,
+            ),
+        ]
+    )
+    @unittest.mock.patch.object(views.MyPath, "get_children")
+    @unittest.mock.patch.object(views.Path, "is_dir")
+    @unittest.mock.patch.object(views.Path, "exists")
+    def test_path_details(
+        self,
+        mypath,
+        base_path,
+        path_exists,
+        path_is_dir,
+        path_has_children,
+        exp_tags_table_visible,
+        exp_link_to_parent_path_visible,
+        exp_path_tokens_count,
+        exp_child_path_tags_count,
+        exp_favorite_icon,
+        mock_pathlib_exists,
+        mock_pathlib_is_dir,
+        mock_mypath_get_children,
+    ):
+        if path_is_dir:
+            # this is how pathlib.is_dir() works
+            assert path_exists
+        if path_has_children:
+            assert path_exists and path_is_dir
+
+        params.BASE_PATH = base_path
+        mock_pathlib_exists.return_value = path_exists
+        if path_has_children:
+            mock_mypath_get_children.return_value = [
+                MyPath(mypath.abs_path / "Downloads", True),
+                MyPath(mypath.abs_path / "Music", True),
+                MyPath(mypath.abs_path / ".bashrc", True),
+            ]
+            mock_pathlib_is_dir.side_effect = [
+                True,
+                True,
+                True,
+                True,
+                False,
+            ]
+        else:
+            mock_mypath_get_children.return_value = []
+            mock_pathlib_is_dir.side_effect = [path_is_dir, path_is_dir]
+
+        response = self.client.get(
+            reverse(
+                f"{urls.app_name}:path_details",
+                kwargs={"abs_path_str": mypath.abs_path_str},
+            )
+        )
+        soup = BeautifulSoup(response.content, "lxml")
+
+        # check favorite icon
+        favorite_icon_img = soup.select_one("#favorite_icon")
+        if exp_favorite_icon is None:
+            self.assertIsNone(favorite_icon_img)
+        elif exp_favorite_icon:
+            self.assertTrue(favorite_icon_img["src"].endswith("star-24-yellow.ico"))
+            self.assertEqual(favorite_icon_img["title"], "Remove from favorites")
+        else:
+            self.assertTrue(favorite_icon_img["src"].endswith("star-24-gray.ico"))
+            self.assertEqual(favorite_icon_img["title"], "Add to favorites")
+
+        # is the table with tags shown
+        self.assertEqual(
+            _table_row_count(soup, "tags_table_body"),
+            3 if exp_tags_table_visible else -1,
+        )
+
+        # are all child paths displayed
+        self.assertEqual(
+            _table_row_count(soup, "path_children_table_body"),
+            3 if path_has_children else -1,
+        )
+
+        # are child paths' tags displayed
+        if path_has_children:
+            self.assertEqual(
+                len(soup.select_one("#path_children_table_body").select(".tag")),
+                exp_child_path_tags_count,
+            )
+
+        # what if there are no child paths
+        if path_exists:
+            self.assertEqual(
+                len(soup.select("#no_child_paths_message")),
+                0 if path_has_children else 1,
+            )
+
+        # is the llink towards the parent path shown
+        self.assertEqual(
+            len(soup.select("#link_to_parent_path")),
+            1 if exp_link_to_parent_path_visible else 0,
+        )
+
+        # what is displayed for nonexistent paths
+        self.assertEqual(
+            len(soup.select("#invalid_path_message")),
+            0 if path_exists else 1,
+        )
+        self.assertEqual(
+            len(soup.select("#invalid_path_str")),
+            0 if path_exists else 1,
+        )
+        if not path_exists and mypath.abs_path_str:
+            self.assertTrue(
+                soup.select_one("#invalid_path_str").text.endswith(mypath.abs_path_str)
+            )
+
+        # are all path tokens shown
+        if path_exists:
+            self.assertEqual(
+                len(soup.select_one("#path_tokens").findAll("a")), exp_path_tokens_count
+            )
+        else:
+            self.assertIsNone(soup.select_one("#path_tokens"))
 
     def test_edit_path_tags(self):
         ...
@@ -737,6 +951,8 @@ class Test(SimpleTestCase):
             in [template.name for template in response.templates]
         )
         self.assertEqual(
-            _row_count(BeautifulSoup(response.content, "lxml"), "favorites_table_body"),
+            _table_row_count(
+                BeautifulSoup(response.content, "lxml"), "favorites_table_body"
+            ),
             1,
         )
