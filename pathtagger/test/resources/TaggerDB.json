@@ -21,14 +21,21 @@
         "4": {
             "path": "/home/dino/Downloads",
             "tag_ids": [
-                "1", "2", "3"
+                "1",
+                "2",
+                "3"
             ]
         },
         "5": {
             "path": "/home/dino/Documents/ViberDownloads",
             "tag_ids": [
-                "1", "2"
+                "1",
+                "2"
             ]
+        },
+        "6": {
+            "path": "/home/dino/Pictures/wallpaper.jpg",
+            "tag_ids": []
         }
     },
     "favorite_paths": {

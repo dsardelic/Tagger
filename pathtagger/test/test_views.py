@@ -51,7 +51,7 @@ class Test(SimpleTestCase):
     def test_get_extended_dataset(self):
         docs = db_operations.get_all_mappings()
         extended_dataset = views.get_extended_dataset(docs)
-        self.assertTrue(len(extended_dataset) == 5)
+        self.assertTrue(len(extended_dataset) == 6)
         self.assertTrue(
             all(
                 key in doc
@@ -66,7 +66,7 @@ class Test(SimpleTestCase):
             )
         )
         self.assertEqual(
-            ["tags" in doc for doc in docs], [True, True, True, True, True]
+            ["tags" in doc for doc in docs], [True, True, True, True, True, False]
         )
 
     def test_get_drive_root_dirs(self):
@@ -272,11 +272,20 @@ class Test(SimpleTestCase):
             mock_delete_mappings.assert_not_called()
 
     @parameterized.expand(
-        [(None, 5, 8), ("all", 5, 8), ("existent", 4, 6), ("nonexistent", 1, 2)]
+        [(None, 6, 8), ("all", 6, 8), ("existent", 5, 7), ("nonexistent", 1, 1)]
     )
+    @unittest.mock.patch.object(views.Path, "is_dir")
+    @unittest.mock.patch.object(views.Path, "exists")
     def test_mappings_list(
-        self, path_type, exp_mappings_table_row_count, exp_tag_count
+        self,
+        path_type,
+        exp_mappings_table_row_count,
+        exp_tag_count,
+        mock_path_exists,
+        mock_path_is_dir,
     ):
+        mock_path_exists.side_effect = [True, False, True, True, True, True]
+        mock_path_is_dir.side_effect = [True, False, True, True, True, False]
         data = {"path_type": path_type} if path_type else {}
         response = self.client.get(reverse(f"{urls.app_name}:mappings_list"), {**data})
         self.assertEqual(response.status_code, 200)
