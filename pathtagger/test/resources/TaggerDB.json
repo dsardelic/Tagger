@@ -34,6 +34,9 @@
     "favorite_paths": {
         "1": {
             "path": "/home/dino/Music"
+        },
+        "2": {
+            "path": "/"
         }
     },
     "tags": {

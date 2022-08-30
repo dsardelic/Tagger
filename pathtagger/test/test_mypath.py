@@ -39,10 +39,10 @@ class TestMyPath(unittest.TestCase):
             (
                 "",
                 True,
-                ".",
-                Path("."),
-                ".",
-                Path("."),
+                None,
+                None,
+                None,
+                None,
                 False,
             ),
             (
@@ -57,10 +57,28 @@ class TestMyPath(unittest.TestCase):
             (
                 ".",
                 True,
-                ".",
-                Path("."),
-                ".",
-                Path("."),
+                None,
+                None,
+                None,
+                None,
+                False,
+            ),
+            (
+                "no-anchor",
+                False,
+                None,
+                None,
+                None,
+                None,
+                False,
+            ),
+            (
+                "no-anchor",
+                True,
+                None,
+                None,
+                None,
+                None,
                 False,
             ),
             (
@@ -181,6 +199,8 @@ class TestMyPath(unittest.TestCase):
 
     def test_abs_path_is_descendant_of_base_path(self):
         test_data = [
+            ("/home", Path("/"), "/home", "/home"),
+            ("/home/user/Videos", Path("/"), "/home/user/Videos", "/home/user/Videos"),
             ("/home/user/Videos", Path("/home/user"), "/home/user/Videos", "/Videos"),
             (
                 "/home/user/Videos/Tarantino",
@@ -217,14 +237,20 @@ class TestMyPath(unittest.TestCase):
             (
                 "",
                 Path("/home/user"),
-                ".",
-                Path("."),
+                None,
+                None,
             ),
             (
                 ".",
                 Path("/home/user"),
-                ".",
-                Path("."),
+                None,
+                None,
+            ),
+            (
+                "no-anchor",
+                Path("/home/user"),
+                None,
+                None,
             ),
             (
                 "/usr",
@@ -370,6 +396,15 @@ class TestMyPath(unittest.TestCase):
                 False,
             ),
             (
+                "no-anchor",
+                Path("/home/user"),
+                None,
+                None,
+                None,
+                None,
+                False,
+            ),
+            (
                 "/usr",
                 Path("/home/user"),
                 "/home/user/usr",
@@ -416,12 +451,11 @@ class TestMyPath(unittest.TestCase):
     def test__to_formatted_posix_path(self):
         # pylint: disable=W0212
         test_data = [
-            ("empty", "", "."),
-            ("dot str", ".", "."),
+            # invalid, handled elsewhere: ("empty", "", "."),
+            # invalid, handled elsewhere: ("dot str", ".", "."),
             ("root", "/", "/"),
             ("leading solidum", "/home/Videos", "/home/Videos"),
             ("multiple leading solida", "////home/Videos", "/home/Videos"),
-            ("trailing solidum", "home/Videos/", "/home/Videos"),
             ("multiple trailing solida", "home/Videos///", "/home/Videos"),
             ("leading and trailing solidum", "/home/Videos/", "/home/Videos"),
             (

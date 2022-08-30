@@ -74,9 +74,9 @@
             </table>
             <input form="mappingsEditForm" type="submit" name="action_delete" value="Delete selected"/>
         {% elif no_mappings_at_all %}
-            There are no defined mappings.
+            <div id="no_defined_mappings">There are no defined mappings.</div>
         {% else %}
-            There are no mappings matching selected search criteria.
+            <div id="no_matching_mappings">There are no mappings matching selected search criteria.</div>
         {% endif %}
     </div>
     <div class="left separate-left">
@@ -96,7 +96,7 @@
     </div>
     {% if not no_mappings_at_all %}
         <div class="right">
-            <div class="div-title">SEARCH FILTERS</div>
+            <div class="div-title" id="search_filters">SEARCH FILTERS</div>
             <form id="mappingFiltersForm" method="GET">
                 {% if tags %}
                     <table style="margin-bottom:10px;">

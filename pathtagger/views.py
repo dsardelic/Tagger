@@ -1,4 +1,5 @@
 import os
+import re
 from pathlib import Path, PosixPath
 from typing import Dict, List, Optional, Union
 from urllib.parse import quote
@@ -11,16 +12,28 @@ from Tagger import params, settings
 
 
 class MyPath:
+    NT_ABS_PATH_STR_REGEX = r"^[A-Za-z]:[\\\/]"
+    NT_DB_PATH_STR_REGEX = r"^[\\\/]"
+
     def __init__(self, raw_path: Union[Path, str], is_abs_path: bool):
         self.raw_path = raw_path
         if raw_path is None:
             self.abs_path_str = None
             return
-        formatted_raw_path_str = self._to_formatted_posix_path_str(raw_path)
-        if not is_abs_path and formatted_raw_path_str in ["", "."]:
-            # no weird db_paths allowed
+        # no weird db_paths allowed
+        if os.name == "posix" and not str(raw_path).startswith("/"):
             self.abs_path_str = None
             return
+        elif os.name == "nt":
+            if (
+                is_abs_path and not re.match(self.NT_ABS_PATH_STR_REGEX, str(raw_path))
+            ) or (
+                not is_abs_path
+                and not re.match(self.NT_DB_PATH_STR_REGEX, str(raw_path))
+            ):
+                self.abs_path_str = None
+                return
+        formatted_raw_path_str = self._to_formatted_posix_path_str(raw_path)
         if is_abs_path or not params.BASE_PATH:
             self.abs_path_str = formatted_raw_path_str
         else:
@@ -60,8 +73,6 @@ class MyPath:
     @staticmethod
     def _to_formatted_posix_path_str(path: Union[Path, str]) -> str:
         path = Path(path)
-        if path.as_posix() == ".":
-            return "."
         if isinstance(path, PosixPath):
             return "/" + path.as_posix().strip("/")
         return MyPath(path, True).abs_path_str
@@ -198,7 +209,7 @@ def mappings_list(request):
         "pathtagger/mappings_list.html",
         {
             "mappings": mappings,
-            "no_mappings_at_all": not db.get_all_mappings(),
+            "no_mappings_at_all": len(db.get_all_mappings()) == 0,
             "filters": filters,
             "tags": db.get_all_tags(),
         },
@@ -287,24 +298,34 @@ def mypath_children_data(mypath: MyPath) -> List[Dict[str, str]]:
 
 def path_details(request, abs_path_str):
     mypath = MyPath(abs_path_str, True)
-    return render(
-        request,
-        "pathtagger/path_details.html",
-        {
-            "path_str": mypath.abs_path_str,
-            "system_path_str": str(mypath.abs_path),
-            "ajax_path_str": quote(mypath.abs_path_str),
-            "is_root_path": mypath.abs_path.anchor == str(mypath.abs_path),
-            "path_exists": mypath.abs_path.exists(),
-            "path_is_favorite": bool(db.get_favorite_path(mypath.db_path_str)),
-            "path_parent": mypath.abs_path.parent.as_posix(),
-            "path_tokens": mypath_tokens(mypath),
-            "path_children": mypath_children_data(mypath),
-            "tags": db.get_all_tags(),
-            "drive_root_dirs": get_drive_root_dirs(),
-            "is_tagging_allowed": mypath.is_valid_db_path_str,
-        },
-    )
+    if mypath.abs_path_str:
+        return render(
+            request,
+            "pathtagger/path_details.html",
+            {
+                "path_str": mypath.abs_path_str,
+                "system_path_str": str(mypath.abs_path),
+                "ajax_path_str": quote(mypath.abs_path_str),
+                "is_root_path": mypath.abs_path.anchor == str(mypath.abs_path),
+                "path_exists": mypath.abs_path.exists(),
+                "path_is_favorite": bool(db.get_favorite_path(mypath.db_path_str)),
+                "path_parent": mypath.abs_path.parent.as_posix(),
+                "path_tokens": mypath_tokens(mypath),
+                "path_children": mypath_children_data(mypath),
+                "tags": db.get_all_tags(),
+                "drive_root_dirs": get_drive_root_dirs(),
+                "is_tagging_allowed": mypath.is_valid_db_path_str,
+            },
+        )
+    else:
+        return render(
+            request,
+            "pathtagger/path_details.html",
+            {
+                "system_path_str": abs_path_str,
+                "path_exists": False,
+            },
+        )
 
 
 def edit_path_tags(request):

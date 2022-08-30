@@ -293,17 +293,6 @@ class Test(SimpleTestCase):
         )
         self.assertEqual(len(soup.select_one("#tags_table_body").select(".tag")), 3)
 
-        db_operations.DB.purge_table("_default")
-        response = self.client.get(reverse(f"{urls.app_name}:mappings_list"), {**data})
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(
-            _table_row_count(
-                BeautifulSoup(response.content, "lxml"), "mappings_table_body"
-            ),
-            -1,
-        )
-        self.assertEqual(len(soup.select_one("#tags_table_body").select(".tag")), 3)
-
     def test_tag_details_get(self):
         tag_id = 2
         response = self.client.get(
@@ -608,18 +597,6 @@ class Test(SimpleTestCase):
     @parameterized.expand(
         [
             (
-                MyPath(None, True),
-                None,
-                False,
-                False,
-                False,
-                False,
-                False,
-                None,
-                None,
-                None,
-            ),
-            (
                 MyPath("no_anchor", True),
                 None,
                 False,
@@ -631,7 +608,7 @@ class Test(SimpleTestCase):
                 None,
                 None,
             ),
-            (MyPath("/", True), None, True, True, True, True, False, 1, 0, False),
+            (MyPath("/", True), None, True, True, True, True, False, 1, 0, True),
             (MyPath("/home", True), None, True, True, True, True, True, 2, 0, False),
             (
                 MyPath("/home/nonexistent_path", True),
@@ -693,6 +670,103 @@ class Test(SimpleTestCase):
                 0,
                 True,
             ),
+            ################################################
+            (
+                MyPath("no_anchor", True),
+                "/home/dino",
+                False,
+                False,
+                False,
+                False,
+                False,
+                None,
+                None,
+                None,
+            ),
+            (
+                MyPath("/", True),
+                "/home/dino",
+                True,
+                True,
+                True,
+                False,
+                False,
+                1,
+                0,
+                False,
+            ),
+            (
+                MyPath("/home", True),
+                "/home/dino",
+                True,
+                True,
+                True,
+                False,
+                True,
+                2,
+                0,
+                False,
+            ),
+            (
+                MyPath("/home/nonexistent_path", True),
+                "/home/dino",
+                False,
+                False,
+                False,
+                False,
+                False,
+                None,
+                None,
+                None,
+            ),
+            (
+                MyPath("/home/dino", True),
+                "/home/dino",
+                True,
+                True,
+                True,
+                True,
+                True,
+                3,
+                0,
+                True,
+            ),
+            (
+                MyPath("/home/dino", True),
+                "/home/dino",
+                True,
+                True,
+                False,
+                False,
+                True,
+                3,
+                0,
+                True,
+            ),
+            (
+                MyPath("/home/dino", True),
+                "/home/dino",
+                True,
+                False,
+                False,
+                False,
+                True,
+                2,
+                0,
+                True,
+            ),
+            (
+                MyPath("/home/dino/Music", True),
+                "/home/dino",
+                True,
+                True,
+                False,
+                False,
+                True,
+                4,
+                0,
+                False,
+            ),
         ]
     )
     @unittest.mock.patch.object(views.MyPath, "get_children")
@@ -701,7 +775,7 @@ class Test(SimpleTestCase):
     def test_path_details(
         self,
         mypath,
-        base_path,
+        base_path_str,
         path_exists,
         path_is_dir,
         path_has_children,
@@ -715,12 +789,11 @@ class Test(SimpleTestCase):
         mock_mypath_get_children,
     ):
         if path_is_dir:
-            # this is how pathlib.is_dir() works
-            assert path_exists
+            assert path_exists  # this is how pathlib.is_dir() works
         if path_has_children:
             assert path_exists and path_is_dir
 
-        params.BASE_PATH = base_path
+        params.BASE_PATH = Path(base_path_str) if base_path_str else None
         mock_pathlib_exists.return_value = path_exists
         if path_has_children:
             mock_mypath_get_children.return_value = [
@@ -742,12 +815,18 @@ class Test(SimpleTestCase):
         response = self.client.get(
             reverse(
                 f"{urls.app_name}:path_details",
-                kwargs={"abs_path_str": mypath.abs_path_str},
+                kwargs={"abs_path_str": mypath.raw_path},
             )
         )
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(
+            f"{urls.app_name}/path_details.html"
+            in [template.name for template in response.templates]
+        )
+
         soup = BeautifulSoup(response.content, "lxml")
 
-        # check favorite icon
+        # check the 'favorite' icon
         favorite_icon_img = soup.select_one("#favorite_icon")
         if exp_favorite_icon is None:
             self.assertIsNone(favorite_icon_img)
@@ -784,7 +863,7 @@ class Test(SimpleTestCase):
                 0 if path_has_children else 1,
             )
 
-        # is the llink towards the parent path shown
+        # is the link to the parent path shown
         self.assertEqual(
             len(soup.select("#link_to_parent_path")),
             1 if exp_link_to_parent_path_visible else 0,
@@ -954,5 +1033,5 @@ class Test(SimpleTestCase):
             _table_row_count(
                 BeautifulSoup(response.content, "lxml"), "favorites_table_body"
             ),
-            1,
+            2,
         )
