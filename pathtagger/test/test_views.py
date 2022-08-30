@@ -272,21 +272,50 @@ class Test(SimpleTestCase):
             mock_delete_mappings.assert_not_called()
 
     @parameterized.expand(
-        [(None, 6, 8), ("all", 6, 8), ("existent", 5, 7), ("nonexistent", 1, 1)]
+        [
+            (None, None, 6, 8),
+            (None, "do", 3, 6),
+            (None, "download", 2, 5),
+            (None, "desktop", -1, None),
+            ("all", None, 6, 8),
+            ("all", "do", 3, 6),
+            ("all", "download", 2, 5),
+            ("all", "desktop", -1, None),
+            ("existent", None, 5, 6),
+            ("existent", "do", 2, 4),
+            ("existent", "download", 1, 3),
+            ("existent", "desktop", -1, None),
+            ("nonexistent", None, 1, 2),
+            ("nonexistent", "do", 1, 2),
+            ("nonexistent", "download", 1, 2),
+            ("nonexistent", "desktop", -1, None),
+        ]
     )
     @unittest.mock.patch.object(views.Path, "is_dir")
     @unittest.mock.patch.object(views.Path, "exists")
-    def test_mappings_list(
+    def test_mappings_list_all(
         self,
         path_type,
+        path_name_like,
         exp_mappings_table_row_count,
         exp_tag_count,
         mock_path_exists,
         mock_path_is_dir,
     ):
-        mock_path_exists.side_effect = [True, False, True, True, True, True]
-        mock_path_is_dir.side_effect = [True, False, True, True, True, False]
-        data = {"path_type": path_type} if path_type else {}
+        # mockati onoliko pathova koliko je rezultata db.get_filtered_mappings()
+        # prebrojati pathove u mappings tablici
+        # prebrojati tagove u mappings tablici
+        # prebrojati path hyperlinkova u mappings tablici
+        # provjeriti jesu li svi nepostojeći pathovi označeni crvenom bojom
+        # provjerit sadržaj path_name_contains
+        # provjerit sadržaj path_type radio grupe
+        # provjerit koji filter check boxovi su uključeni
+        mock_path_exists.side_effect = [True, True, True, True, False, True]
+        mock_path_is_dir.side_effect = [True, True, True, True, False, False]
+        data = {"path_type": path_type, "path_name_like": path_name_like}
+        for key in ["path_type", "path_name_like"]:
+            if data[key] is None:
+                del data[key]
         response = self.client.get(reverse(f"{urls.app_name}:mappings_list"), {**data})
         self.assertEqual(response.status_code, 200)
         self.assertTrue(
@@ -297,9 +326,13 @@ class Test(SimpleTestCase):
         self.assertEqual(
             _table_row_count(soup, "mappings_table_body"), exp_mappings_table_row_count
         )
-        self.assertEqual(
-            len(soup.select_one("#mappings_table_body").select(".tag")), exp_tag_count
-        )
+        if exp_mappings_table_row_count > -1:
+            self.assertEqual(
+                len(soup.select_one("#mappings_table_body").select(".tag")),
+                exp_tag_count,
+            )
+        else:
+            self.assertIsNone(soup.select_one("#mappings_table_body"))
         self.assertEqual(len(soup.select_one("#tags_table_body").select(".tag")), 3)
 
     def test_tag_details_get(self):
