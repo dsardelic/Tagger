@@ -218,9 +218,11 @@ def mappings_list(request):
 
 def tag_details(request, tag_id):
     if request.method == "POST":
-        name = request.POST.get("name")
-        color = request.POST.get("color", params.DEFAULT_TAG_COLOR)
-        if name and color and not db.get_tag_by_name(name):
+        if (
+            (name := request.POST.get("name"))
+            and not db.get_tag_by_name(name)
+            and (color := request.POST.get("color", params.DEFAULT_TAG_COLOR))
+        ):
             db.update_tag(tag_id, name, color)
         return redirect("pathtagger:tags_list")
     return render(
@@ -234,9 +236,11 @@ def tag_details(request, tag_id):
 
 
 def add_tag(request):
-    name = request.POST.get("name")
-    color = request.POST.get("color", params.DEFAULT_TAG_COLOR)
-    if name and color and not db.get_tag_by_name(name):
+    if (
+        (name := request.POST.get("name"))
+        and not db.get_tag_by_name(name)
+        and (color := request.POST.get("color", params.DEFAULT_TAG_COLOR))
+    ):
         db.insert_tag(name, color)
     return redirect("pathtagger:tags_list")
 

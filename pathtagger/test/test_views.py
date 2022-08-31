@@ -273,49 +273,141 @@ class Test(SimpleTestCase):
 
     @parameterized.expand(
         [
-            (None, None, 6, 8),
-            (None, "do", 3, 6),
-            (None, "download", 2, 5),
-            (None, "desktop", -1, None),
-            ("all", None, 6, 8),
-            ("all", "do", 3, 6),
-            ("all", "download", 2, 5),
-            ("all", "desktop", -1, None),
-            ("existent", None, 5, 6),
-            ("existent", "do", 2, 4),
-            ("existent", "download", 1, 3),
-            ("existent", "desktop", -1, None),
-            ("nonexistent", None, 1, 2),
-            ("nonexistent", "do", 1, 2),
-            ("nonexistent", "download", 1, 2),
-            ("nonexistent", "desktop", -1, None),
+            (
+                [],
+                [],
+                None,
+                None,
+                [True, True, True, True, False, True],
+                [True, True, True, True, False, False],
+                6,
+                4,
+                1,
+                1,
+                8,
+            ),
+            (
+                [1],
+                [],
+                "do",
+                "all",
+                [True, False],
+                [True, False],
+                2,
+                1,
+                0,
+                1,
+                5,
+            ),
+            (
+                [1],
+                [2],
+                "do",
+                "all",
+                [],
+                [],
+                -1,
+                0,
+                0,
+                0,
+                -1,
+            ),
+            (
+                [2],
+                [2],
+                "do",
+                "all",
+                [],
+                [],
+                -1,
+                0,
+                0,
+                0,
+                -1,
+            ),
+            (
+                [3],
+                [2],
+                "do",
+                "all",
+                [True],
+                [True],
+                1,
+                1,
+                0,
+                0,
+                1,
+            ),
+            (
+                [3],
+                [],
+                "jpg",
+                "existent",
+                [],
+                [],
+                -1,
+                0,
+                0,
+                0,
+                -1,
+            ),
+            (
+                [],
+                [1],
+                "jpg",
+                "existent",
+                [True],
+                [False],
+                1,
+                0,
+                1,
+                0,
+                0,
+            ),
+            (
+                [],
+                [3],
+                None,
+                "nonexistent",
+                [False, False, False, False],
+                [False, False, False, False],
+                4,
+                0,
+                0,
+                4,
+                4,
+            ),
         ]
     )
     @unittest.mock.patch.object(views.Path, "is_dir")
     @unittest.mock.patch.object(views.Path, "exists")
-    def test_mappings_list_all(
+    def test_mappings_list_nonempty(
         self,
-        path_type,
+        tag_ids_to_include,
+        tag_ids_to_exclude,
         path_name_like,
+        path_type,
+        path_exists,
+        path_is_dir,
         exp_mappings_table_row_count,
-        exp_tag_count,
+        exp_folders_count,
+        exp_files_count,
+        exp_nonexistent_count,
+        exp_mappings_tags_count,
         mock_path_exists,
         mock_path_is_dir,
     ):
-        # mockati onoliko pathova koliko je rezultata db.get_filtered_mappings()
-        # prebrojati pathove u mappings tablici
-        # prebrojati tagove u mappings tablici
-        # prebrojati path hyperlinkova u mappings tablici
-        # provjeriti jesu li svi nepostojeći pathovi označeni crvenom bojom
-        # provjerit sadržaj path_name_contains
-        # provjerit sadržaj path_type radio grupe
-        # provjerit koji filter check boxovi su uključeni
-        mock_path_exists.side_effect = [True, True, True, True, False, True]
-        mock_path_is_dir.side_effect = [True, True, True, True, False, False]
-        data = {"path_type": path_type, "path_name_like": path_name_like}
-        for key in ["path_type", "path_name_like"]:
-            if data[key] is None:
-                del data[key]
+        mock_path_exists.side_effect = path_exists
+        mock_path_is_dir.side_effect = path_is_dir
+        data = {
+            "tag_id_include": tag_ids_to_include,
+            "tag_id_exclude": tag_ids_to_exclude,
+            "path_type": path_type,
+            "path_name_like": path_name_like,
+        }
+        for param in list(data.keys()):
+            if data[param] is None:
+                del data[param]
         response = self.client.get(reverse(f"{urls.app_name}:mappings_list"), {**data})
         self.assertEqual(response.status_code, 200)
         self.assertTrue(
@@ -323,17 +415,110 @@ class Test(SimpleTestCase):
             in [template.name for template in response.templates]
         )
         soup = BeautifulSoup(response.content, "lxml")
+
+        # prebrojati pathove u mappings tablici
         self.assertEqual(
             _table_row_count(soup, "mappings_table_body"), exp_mappings_table_row_count
         )
         if exp_mappings_table_row_count > -1:
+            self.assertIsNone(soup.select_one("#no_defined_mappings"))
+            self.assertIsNone(soup.select_one("#no_matching_mappings"))
+            # prebrojati vrste pathova u mappings tablici
+            self.assertEqual(
+                len(soup.select_one("#mappings_table_body").select(".folder-path")),
+                exp_folders_count,
+            )
+            self.assertEqual(
+                len(
+                    [
+                        element.a
+                        for element in soup.select_one("#mappings_table_body").select(
+                            ".folder-path"
+                        )
+                    ]
+                ),
+                exp_folders_count,
+            )
+            self.assertEqual(
+                len(soup.select_one("#mappings_table_body").select(".nonfolder-path")),
+                exp_files_count,
+            )
+            self.assertEqual(
+                len(
+                    soup.select_one("#mappings_table_body").select(".nonexistent-path")
+                ),
+                exp_nonexistent_count,
+            )
+            # prebrojati tagove u mappings tablici
             self.assertEqual(
                 len(soup.select_one("#mappings_table_body").select(".tag")),
-                exp_tag_count,
+                exp_mappings_tags_count,
             )
         else:
             self.assertIsNone(soup.select_one("#mappings_table_body"))
-        self.assertEqual(len(soup.select_one("#tags_table_body").select(".tag")), 3)
+            self.assertIsNone(soup.select_one("#no_defined_mappings"))
+            self.assertIsNotNone(soup.select_one("#no_matching_mappings"))
+
+        # provjerit sadržaj path_name_contains
+        self.assertEqual(
+            soup.select_one("#PathNameLikeTextbox")["value"],
+            path_name_like if path_name_like else "",
+        )
+
+        # provjerit sadržaj path_type radio grupe
+        if not path_type or path_type == "all":
+            self.assertEqual(soup.select_one("#PathTypeAllRadio")["checked"], "")
+            with self.assertRaises(KeyError):
+                soup.select_one("#PathTypeExistentRadio")["checked"]
+            with self.assertRaises(KeyError):
+                soup.select_one("#PathTypeNonexistentRadio")["checked"]
+        elif path_type == "existent":
+            self.assertEqual(soup.select_one("#PathTypeExistentRadio")["checked"], "")
+            with self.assertRaises(KeyError):
+                soup.select_one("#PathTypeAllRadio")["checked"]
+            with self.assertRaises(KeyError):
+                soup.select_one("#PathTypeNonexistentRadio")["checked"]
+        elif path_type == "nonexistent":
+            self.assertEqual(
+                soup.select_one("#PathTypeNonexistentRadio")["checked"], ""
+            )
+            with self.assertRaises(KeyError):
+                soup.select_one("#PathTypeAllRadio")["checked"]
+            with self.assertRaises(KeyError):
+                soup.select_one("#PathTypeExistentRadio")["checked"]
+
+        # provjeriti prikazane tagove
+        self.assertEqual(_table_row_count(soup, "tags_table_body"), 3)
+        for tag_id in [tag.doc_id for tag in views.db.get_all_tags()]:
+            if tag_id in tag_ids_to_include:
+                self.assertEqual(
+                    soup.select_one(f"#filter_tag_{tag_id}_include")["checked"], ""
+                )
+            else:
+                with self.assertRaises(KeyError):
+                    soup.select_one(f"#filter_tag_{tag_id}_include")["checked"]
+            if tag_id in tag_ids_to_exclude:
+                self.assertEqual(
+                    soup.select_one(f"#filter_tag_{tag_id}_exclude")["checked"], ""
+                )
+            else:
+                with self.assertRaises(KeyError):
+                    soup.select_one(f"#filter_tag_{tag_id}_exclude")["checked"]
+
+    def test_mappings_list_empty(self):
+        views.db.DB.purge_table("_default")
+        data = {"path_type": "all"}
+        response = self.client.get(reverse(f"{urls.app_name}:mappings_list"), {**data})
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(
+            f"{urls.app_name}/mappings_list.html"
+            in [template.name for template in response.templates]
+        )
+        soup = BeautifulSoup(response.content, "lxml")
+        self.assertIsNone(soup.select_one("#mappings_table_body"))
+        self.assertIsNone(soup.select_one("#no_matching_mappings"))
+        self.assertIsNotNone(soup.select_one("#no_defined_mappings"))
+        self.assertEqual(_table_row_count(soup, "tags_table_body"), -1)
 
     def test_tag_details_get(self):
         tag_id = 2
@@ -368,7 +553,7 @@ class Test(SimpleTestCase):
     ):
         tag_id = 2
         data = {"name": name, "color": color}
-        for param in ["name", "color"]:
+        for param in list(data.keys()):
             if data[param] is None:
                 del data[param]
         response = self.client.post(
@@ -401,7 +586,7 @@ class Test(SimpleTestCase):
         self, _, name, color, exp_color, exp_insert_tag_called, mock_insert_tag
     ):
         data = {"name": name, "color": color}
-        for param in ["name", "color"]:
+        for param in list(data.keys()):
             if data[param] is None:
                 del data[param]
         response = self.client.post(

@@ -463,7 +463,7 @@ class TestMyPath(unittest.TestCase):
                 "///home/Videos///",
                 "/home/Videos",
             ),
-            ("intermediate solida", "/home//Videos", "/home/Videos"),
+            ("multiple intermediate solida", "/home//Videos", "/home/Videos"),
         ]
         for description, path, exp_rval in test_data:
             with self.subTest(description=description):

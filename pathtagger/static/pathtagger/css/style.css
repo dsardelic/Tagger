@@ -88,6 +88,10 @@ table.invisible td.input {
     text-align: left;
 }
 
+td.folder-path, td.nonfolder-path, td.nonexistent-path {
+    text-align:left;
+}
+
 .left {
     float:left;
 }
