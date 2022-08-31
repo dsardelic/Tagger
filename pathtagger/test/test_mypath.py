@@ -447,27 +447,3 @@ class TestMyPath(unittest.TestCase):
                     self.assertEqual(
                         mypath.is_valid_db_path_str, exp_is_valid_db_path_str
                     )
-
-    def test__to_formatted_posix_path(self):
-        # pylint: disable=W0212
-        test_data = [
-            # invalid, handled elsewhere: ("empty", "", "."),
-            # invalid, handled elsewhere: ("dot str", ".", "."),
-            ("root", "/", "/"),
-            ("leading solidum", "/home/Videos", "/home/Videos"),
-            ("multiple leading solida", "////home/Videos", "/home/Videos"),
-            ("multiple trailing solida", "home/Videos///", "/home/Videos"),
-            ("leading and trailing solidum", "/home/Videos/", "/home/Videos"),
-            (
-                "multiple leading and trailing solida",
-                "///home/Videos///",
-                "/home/Videos",
-            ),
-            ("multiple intermediate solida", "/home//Videos", "/home/Videos"),
-        ]
-        for description, path, exp_rval in test_data:
-            with self.subTest(description=description):
-                self.assertEqual(MyPath._to_formatted_posix_path_str(path), exp_rval)
-            path = Path(path)
-            with self.subTest(description=description):
-                self.assertEqual(MyPath._to_formatted_posix_path_str(path), exp_rval)

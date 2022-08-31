@@ -33,7 +33,9 @@ class MyPath:
             ):
                 self.abs_path_str = None
                 return
-        formatted_raw_path_str = self._to_formatted_posix_path_str(raw_path)
+        formatted_raw_path_str = Path(raw_path).as_posix().strip("/")
+        if isinstance(Path(raw_path), PosixPath):
+            formatted_raw_path_str = "/" + formatted_raw_path_str
         if is_abs_path or not params.BASE_PATH:
             self.abs_path_str = formatted_raw_path_str
         else:
@@ -69,13 +71,6 @@ class MyPath:
     @property
     def is_valid_db_path_str(self) -> bool:
         return self.db_path_str not in (None, ".")
-
-    @staticmethod
-    def _to_formatted_posix_path_str(path: Union[Path, str]) -> str:
-        path = Path(path)
-        if isinstance(path, PosixPath):
-            return "/" + path.as_posix().strip("/")
-        return MyPath(path, True).abs_path_str
 
     def get_children(self) -> List["MyPath"]:
         return [
