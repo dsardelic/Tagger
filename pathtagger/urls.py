@@ -2,7 +2,7 @@ from django.urls import path
 
 from . import views
 
-app_name = "pathtagger"  # pylint: disable=C0103
+app_name = "pathtagger"  # pylint: disable=invalid-name
 
 urlpatterns = [
     path("mappings/<int:mapping_id>/", views.mapping_details, name="mapping_details"),

@@ -1,5 +1,4 @@
-"""
-WSGI config for Tagger project.
+""" WSGI config for Tagger project.
 
 It exposes the WSGI callable as a module-level variable named ``application``.
 
@@ -13,4 +12,4 @@ from django.core.wsgi import get_wsgi_application
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "Tagger.settings")
 
-application = get_wsgi_application()  # pylint: disable=C0103
+application = get_wsgi_application()

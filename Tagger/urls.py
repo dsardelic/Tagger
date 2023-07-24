@@ -16,7 +16,7 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import include, path
 
-urlpatterns = [  # pylint: disable=C0103
+urlpatterns = [
     path("pathtagger/", include("pathtagger.urls")),
     path("admin/", admin.site.urls),
 ]

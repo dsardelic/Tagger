@@ -1,4 +1,3 @@
-# pylint: disable=C0103
-"""
-@author: dino
-"""
+# pylint: disable=invalid-name
+
+""" @author: dino """

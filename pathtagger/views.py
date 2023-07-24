@@ -24,7 +24,7 @@ class MyPath:
         if os.name == "posix" and not str(raw_path).startswith("/"):
             self.abs_path_str = None
             return
-        elif os.name == "nt":
+        if os.name == "nt":
             if (
                 is_abs_path and not re.match(self.NT_ABS_PATH_STR_REGEX, str(raw_path))
             ) or (
@@ -100,7 +100,7 @@ def get_extended_dataset(dataset):
 
 def get_drive_root_dirs():
     if os.name == "nt":
-        from ctypes import windll  # pylint: disable=C0415
+        from ctypes import windll  # pylint: disable=import-outside-toplevel
 
         bitfield = windll.kernel32.GetLogicalDrives()
         masks = [(1 << n, chr(ord("A") + n)) for n in range(ord("Z") - ord("A") + 1)]
@@ -148,8 +148,8 @@ def parse_tag_ids_to_append_and_remove(querydict):
 def create_tags(new_tag_names):
     tag_ids = []
     if new_tag_names:
-        for name in new_tag_names.strip(",").split(","):
-            name = name.strip()
+        for raw_name in new_tag_names.strip(",").split(","):
+            name = raw_name.strip()
             if name and not db.get_tag_by_name(name):
                 tag_ids.append(db.insert_tag(name, params.DEFAULT_TAG_COLOR))
     return tag_ids
@@ -194,17 +194,18 @@ def mappings_list(request):
         mappings = [mapping for mapping in mappings if mapping["path_exists"]]
     elif path_type == "nonexistent":
         mappings = [mapping for mapping in mappings if not mapping["path_exists"]]
-    filters = {}
-    filters["tag_ids_to_include"] = tag_ids_to_include
-    filters["tag_ids_to_exclude"] = tag_ids_to_exclude
-    filters["path_name_like"] = path_name_like
-    filters["path_type"] = path_type
+    filters = {
+        "tag_ids_to_include": tag_ids_to_include,
+        "tag_ids_to_exclude": tag_ids_to_exclude,
+        "path_name_like": path_name_like,
+        "path_type": path_type,
+    }
     return render(
         request,
         "pathtagger/mappings_list.html",
         {
             "mappings": mappings,
-            "no_mappings_at_all": len(db.get_all_mappings()) == 0,
+            "no_mappings_at_all": not db.get_all_mappings(),
             "filters": filters,
             "tags": db.get_all_tags(),
         },
@@ -316,23 +317,21 @@ def path_details(request, abs_path_str):
                 "is_tagging_allowed": mypath.is_valid_db_path_str,
             },
         )
-    else:
-        return render(
-            request,
-            "pathtagger/path_details.html",
-            {
-                "system_path_str": abs_path_str,
-                "path_exists": False,
-            },
-        )
+    return render(
+        request,
+        "pathtagger/path_details.html",
+        {
+            "system_path_str": abs_path_str,
+            "path_exists": False,
+        },
+    )
 
 
 def edit_path_tags(request):
     if paths := request.POST.getlist("path"):
         mapping_ids = []
         for path in paths:
-            mapping = db.get_mapping_by_path(path)
-            if mapping:
+            if mapping := db.get_mapping_by_path(path):
                 mapping_ids.append(mapping.doc_id)
             else:
                 mapping_ids.append(db.insert_mapping(path, []))
