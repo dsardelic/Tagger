@@ -287,9 +287,9 @@ class Test(SimpleTestCase):
                 8,
             ),
             (
-                [1],
+                [1, 2],
                 [],
-                "do",
+                "di",
                 "all",
                 [True, False],
                 [True, False],
