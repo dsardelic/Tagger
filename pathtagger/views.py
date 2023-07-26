@@ -114,7 +114,7 @@ def get_drive_root_dirs():
 
 def mapping_details(request, mapping_id):
     if request.method == "POST":
-        mypath = MyPath(request.POST.get("path"), False)
+        mypath = MyPath(request.POST.get("path"), True)
         if mypath.is_valid_db_path_str:
             db.update_mapping(mapping_id, mypath.db_path_str)
         return redirect("pathtagger:mappings_list")
