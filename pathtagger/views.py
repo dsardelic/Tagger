@@ -328,13 +328,14 @@ def path_details(request, abs_path_str):
 
 
 def edit_path_tags(request):
-    if paths := request.POST.getlist("path"):
+    if raw_path_strs := request.POST.getlist("path"):
         mapping_ids = []
-        for path in paths:
-            if mapping := db.get_mapping_by_path(path):
+        for raw_path_str in raw_path_strs:
+            mypath = MyPath(raw_path_str, True)
+            if mapping := db.get_mapping_by_path(mypath.db_path_str):
                 mapping_ids.append(mapping.doc_id)
             else:
-                mapping_ids.append(db.insert_mapping(path, []))
+                mapping_ids.append(db.insert_mapping(mypath.db_path_str, []))
         tag_ids_to_append, tag_ids_to_remove = parse_tag_ids_to_append_and_remove(
             request.POST
         )
