@@ -23,16 +23,16 @@ def get_all_favorite_paths():
     return DB.table("favorite_paths").all()
 
 
-def get_favorite_path(path: str):
-    return DB.table("favorite_paths").get(where("path") == path)
+def get_favorite_path(db_path_str: str):
+    return DB.table("favorite_paths").get(where("path") == db_path_str)
 
 
-def insert_favorite_path(path: str):
-    return DB.table("favorite_paths").insert({"path": path})
+def insert_favorite_path(db_path_str: str):
+    return DB.table("favorite_paths").insert({"path": db_path_str})
 
 
-def delete_favorite_path(path: str):
-    DB.table("favorite_paths").remove(where("path") == path)
+def delete_favorite_path(db_path_str: str):
+    DB.table("favorite_paths").remove(where("path") == db_path_str)
 
 
 def get_all_tags():
@@ -97,36 +97,40 @@ def get_all_mappings():
     return DB.all()
 
 
-def insert_mapping(path: str, tag_ids: Optional[List[int]] = None):
-    if path:
-        return DB.insert({"path": path, "tag_ids": tag_ids or []})
+def insert_mapping(db_path_str: str, tag_ids: Optional[List[int]] = None):
+    if db_path_str:
+        return DB.insert({"path": db_path_str, "tag_ids": tag_ids or []})
     return None
 
 
-def get_mapping_by_path(path: str):
-    return DB.get(where("path") == path)
+def get_mapping_by_path(db_path_str: str):
+    return DB.get(where("path") == db_path_str)
 
 
 def delete_mappings(mapping_ids: List[int]):
     DB.remove(doc_ids=mapping_ids)
 
 
-def update_mapping(mapping_id: int, path: str):
-    DB.update({"path": path}, doc_ids=[mapping_id])
+def update_mapping(mapping_id: int, db_path_str: str):
+    DB.update({"path": db_path_str}, doc_ids=[mapping_id])
 
 
 def get_filtered_mappings(
     tag_ids_to_include: List[int],
     tag_ids_to_exclude: List[int],
-    path_name_like: Optional[str] = None,
+    db_path_str_like: Optional[str] = None,
 ):
     tag_str_ids_to_include = [str(tag_id) for tag_id in tag_ids_to_include]
     tag_str_ids_to_exclude = [str(tag_id) for tag_id in tag_ids_to_exclude]
-    if path_name_like:
+    if db_path_str_like:
         return DB.table("_default").search(
             (Query().tag_ids.all(tag_str_ids_to_include))
             & (~(Query().tag_ids.any(tag_str_ids_to_exclude)))
-            & (Query().path.test(lambda x: x.lower().find(path_name_like.lower()) > -1))
+            & (
+                Query().path.test(
+                    lambda x: x.lower().find(db_path_str_like.lower()) > -1
+                )
+            )
         )
     return DB.table("_default").search(
         (Query().tag_ids.all(tag_str_ids_to_include))
