@@ -109,6 +109,7 @@ def get_mapping_by_path(db_path_str: str):
 
 def delete_mappings(mapping_ids: List[int]):
     DB.remove(doc_ids=mapping_ids)
+    remove_mappings_without_tags()
 
 
 def update_mapping(mapping_id: int, db_path_str: str):

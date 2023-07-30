@@ -370,8 +370,8 @@ class TestDbOperations(unittest.TestCase):
 
     @parameterized.expand(
         (
-            ([2, 3, 4], 3),
-            ([5], 5),
+            ([2, 3, 4], 2),
+            ([5], 4),
             ([6], 5),
         )
     )
