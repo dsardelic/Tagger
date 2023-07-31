@@ -105,9 +105,13 @@ class Test(SimpleTestCase):
             ("path non-empty", "/new_db_path_str", True),
         ]
     )
-    @unittest.mock.patch.object(views.db, "update_mapping")
+    @unittest.mock.patch.object(views.db, "update_mapping_path")
     def test_mapping_details_post(
-        self, _, new_db_path_str, exp_update_mapping_called, mock_update_mapping
+        self,
+        _,
+        new_db_path_str,
+        exp_update_mapping_path_called,
+        mock_update_mapping_path,
     ):
         mapping_id = 1
         data = {"path": new_db_path_str} if new_db_path_str else {}
@@ -120,10 +124,12 @@ class Test(SimpleTestCase):
             follow=True,
         )
         self.assertRedirects(response, reverse(f"{urls.app_name}:mappings_list"))
-        if exp_update_mapping_called:
-            mock_update_mapping.assert_called_once_with(mapping_id, new_db_path_str)
+        if exp_update_mapping_path_called:
+            mock_update_mapping_path.assert_called_once_with(
+                mapping_id, new_db_path_str
+            )
         else:
-            mock_update_mapping.assert_not_called()
+            mock_update_mapping_path.assert_not_called()
 
     @parameterized.expand(
         [

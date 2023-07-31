@@ -394,10 +394,10 @@ class TestDbOperations(unittest.TestCase):
             ("same path", 1, "/home/dino/Music"),
         )
     )
-    def test_update_mapping(self, _, mapping_id, path_str_new):
+    def test_update_mapping_path(self, _, mapping_id, path_str_new):
         # assume valid and existing mapping_id
         mapping_old = db_operations.get_mapping(mapping_id)
-        db_operations.update_mapping(mapping_id, path_str_new)
+        db_operations.update_mapping_path(mapping_id, path_str_new)
         mapping_new = db_operations.get_mapping(mapping_id)
         self.assertEqual(mapping_new["path"], path_str_new)
         self.assertEqual(mapping_new["tag_ids"], mapping_old["tag_ids"])
