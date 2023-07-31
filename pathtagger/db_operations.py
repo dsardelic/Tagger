@@ -19,19 +19,19 @@ def load_db(path):
 DB = load_db(params.DB_PATH)
 
 
-def get_all_favorite_paths():
+def get_all_favorites():
     return DB.table("favorite_paths").all()
 
 
-def get_favorite_path(db_path_str: str):
+def get_favorite(db_path_str: str):
     return DB.table("favorite_paths").get(where("path") == db_path_str)
 
 
-def insert_favorite_path(db_path_str: str):
+def insert_favorite(db_path_str: str):
     return DB.table("favorite_paths").insert({"path": db_path_str})
 
 
-def delete_favorite_path(db_path_str: str):
+def delete_favorite(db_path_str: str):
     DB.table("favorite_paths").remove(where("path") == db_path_str)
 
 

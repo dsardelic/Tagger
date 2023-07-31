@@ -308,7 +308,7 @@ def path_details(request, abs_path_str):
                 "ajax_path_str": quote(mypath.abs_path_str),
                 "is_root_path": mypath.abs_path.anchor == str(mypath.abs_path),
                 "path_exists": mypath.abs_path.exists(),
-                "path_is_favorite": bool(db.get_favorite_path(mypath.db_path_str)),
+                "path_is_favorite": bool(db.get_favorite(mypath.db_path_str)),
                 "path_parent": mypath.abs_path.parent.as_posix(),
                 "path_tokens": mypath_tokens(mypath),
                 "path_children": mypath_children_data(mypath),
@@ -350,11 +350,11 @@ def edit_path_tags(request):
 def toggle_favorite_path(request):
     mypath = MyPath(request.POST.get("path"), True)
     if mypath.is_valid_db_path_str:
-        if db.get_favorite_path(mypath.db_path_str):
-            db.delete_favorite_path(mypath.db_path_str)
+        if db.get_favorite(mypath.db_path_str):
+            db.delete_favorite(mypath.db_path_str)
             is_favorite = False
         else:
-            db.insert_favorite_path(mypath.db_path_str)
+            db.insert_favorite(mypath.db_path_str)
             is_favorite = True
         if request.is_ajax():
             return JsonResponse({"status": "ok", "is_favorite": str(bool(is_favorite))})
@@ -375,5 +375,5 @@ def homepage(request):
     return render(
         request,
         "pathtagger/homepage.html",
-        {"favorite_paths": get_extended_dataset(db.get_all_favorite_paths())},
+        {"favorites": get_extended_dataset(db.get_all_favorites())},
     )

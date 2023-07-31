@@ -1163,9 +1163,9 @@ class Test(SimpleTestCase):
             ),
         ]
     )
-    @unittest.mock.patch.object(views.db, "delete_favorite_path")
-    @unittest.mock.patch.object(views.db, "insert_favorite_path")
-    @unittest.mock.patch.object(views.db, "get_favorite_path")
+    @unittest.mock.patch.object(views.db, "delete_favorite")
+    @unittest.mock.patch.object(views.db, "insert_favorite")
+    @unittest.mock.patch.object(views.db, "get_favorite")
     def test_toggle_favorite_path(
         self,
         _,
@@ -1174,13 +1174,13 @@ class Test(SimpleTestCase):
         prev_is_favorite,
         exp_insert_or_delete_called,
         exp_json_response_dict,
-        mock_get_favorite_path,
-        mock_insert_favorite_path,
-        mock_delete_favorite_path,
+        mock_get_favorite,
+        mock_insert_favorite,
+        mock_delete_favorite,
     ):
         data = {"path": abs_path_str} if abs_path_str else {}
         headers = {"HTTP_X_REQUESTED_WITH": "XMLHttpRequest"} if is_ajax_call else {}
-        mock_get_favorite_path.return_value = prev_is_favorite
+        mock_get_favorite.return_value = prev_is_favorite
         response = self.client.post(
             reverse(f"{urls.app_name}:toggle_favorite_path"),
             {**data},
@@ -1189,11 +1189,11 @@ class Test(SimpleTestCase):
         )
         if exp_insert_or_delete_called:
             if prev_is_favorite:
-                mock_insert_favorite_path.assert_not_called()
-                mock_delete_favorite_path.assert_called_once()
+                mock_insert_favorite.assert_not_called()
+                mock_delete_favorite.assert_called_once()
             else:
-                mock_insert_favorite_path.assert_called_once()
-                mock_delete_favorite_path.assert_not_called()
+                mock_insert_favorite.assert_called_once()
+                mock_delete_favorite.assert_not_called()
         if is_ajax_call:
             self.assertEqual(
                 literal_eval(response.content.decode("utf-8")), exp_json_response_dict

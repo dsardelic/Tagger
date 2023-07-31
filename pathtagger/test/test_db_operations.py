@@ -25,8 +25,8 @@ class TestDbOperations(unittest.TestCase):
     def tearDown(self):
         os.remove(self.db_tmp_file_name)
 
-    def test_get_all_favorite_paths(self):
-        favorites = db_operations.get_all_favorite_paths()
+    def test_get_all_favorites(self):
+        favorites = db_operations.get_all_favorites()
         self.assertEqual(len(favorites), 2)
         self.assertEqual(favorites[0].doc_id, 1)
         self.assertEqual(favorites[0]["path"], "/home/dino/Music")
@@ -34,7 +34,7 @@ class TestDbOperations(unittest.TestCase):
         self.assertEqual(favorites[1]["path"], "/")
 
         db_operations.DB.purge_tables()
-        self.assertEqual(db_operations.get_all_favorite_paths(), [])
+        self.assertEqual(db_operations.get_all_favorites(), [])
 
     @parameterized.expand(
         [
@@ -42,10 +42,10 @@ class TestDbOperations(unittest.TestCase):
             ("nonexistent path", "/foo", False, None),
         ]
     )
-    def test_get_favorite_path(
+    def test_get_favorite(
         self, _, favorite_path, exp_get_successful, exp_favorite_doc_id
     ):
-        favorite = db_operations.get_favorite_path(favorite_path)
+        favorite = db_operations.get_favorite(favorite_path)
         if exp_get_successful:
             self.assertEqual(favorite.doc_id, exp_favorite_doc_id)
             self.assertEqual(favorite["path"], favorite_path)
@@ -60,23 +60,23 @@ class TestDbOperations(unittest.TestCase):
             # TODO ("existing path", "/home/dino/Music", False),
         ]
     )
-    def test_insert_favorite_path(self, _, path_str, exp_insert_successful):
-        favorite_prev = db_operations.get_favorite_path(path_str)
-        favorites_count_prev = len(db_operations.get_all_favorite_paths())
-        inserted_favorite_id = db_operations.insert_favorite_path(path_str)
+    def test_insert_favorite(self, _, path_str, exp_insert_successful):
+        favorite_prev = db_operations.get_favorite(path_str)
+        favorites_count_prev = len(db_operations.get_all_favorites())
+        inserted_favorite_id = db_operations.insert_favorite(path_str)
         if exp_insert_successful:
             self.assertEqual(
-                len(db_operations.get_all_favorite_paths()), favorites_count_prev + 1
+                len(db_operations.get_all_favorites()), favorites_count_prev + 1
             )
             self.assertIsNone(favorite_prev)
-            inserted_favorite = db_operations.get_favorite_path(path_str)
+            inserted_favorite = db_operations.get_favorite(path_str)
             self.assertEqual(inserted_favorite["path"], path_str)
         else:
             self.assertIsNone(inserted_favorite_id)
             self.assertEqual(
-                len(db_operations.get_all_favorite_paths()), favorites_count_prev
+                len(db_operations.get_all_favorites()), favorites_count_prev
             )
-            self.assertEqual(db_operations.get_favorite_path(path_str), favorite_prev)
+            self.assertEqual(db_operations.get_favorite(path_str), favorite_prev)
 
     @parameterized.expand(
         [
@@ -84,12 +84,12 @@ class TestDbOperations(unittest.TestCase):
             ("nonexistent favorite path", "/foo", 2),
         ]
     )
-    def test_delete_favorite_path(self, _, mapping_path, exp_remaining_favorites_count):
-        db_operations.delete_favorite_path(mapping_path)
+    def test_delete_favorite(self, _, mapping_path, exp_remaining_favorites_count):
+        db_operations.delete_favorite(mapping_path)
         self.assertEqual(
-            len(db_operations.get_all_favorite_paths()), exp_remaining_favorites_count
+            len(db_operations.get_all_favorites()), exp_remaining_favorites_count
         )
-        self.assertIsNone(db_operations.get_favorite_path(mapping_path))
+        self.assertIsNone(db_operations.get_favorite(mapping_path))
 
     def test_get_all_tags(self):
         tags = db_operations.get_all_tags()
@@ -326,8 +326,8 @@ class TestDbOperations(unittest.TestCase):
                 "new path with valid tag_ids",
                 "/foo",
                 True,
-                ["1", "3"],
-                ["1", "3"],
+                [1, 3],
+                [1, 3],
             ),
             # TODO ("existing path", "/home/dino/Videos", False, None, None),
         )
