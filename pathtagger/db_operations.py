@@ -1,4 +1,5 @@
-from typing import List, Optional
+import re
+from typing import List, Optional, Union
 
 from tinydb import Query, TinyDB, where
 
@@ -51,7 +52,17 @@ def get_tag(tag_id: int = None, name: str = None):
     return tag
 
 
-def insert_tag(name: str, color: str):
+def _is_valid_hex_color(color: str) -> bool:
+    if not color:
+        return False
+    return bool(re.fullmatch(r"^#[0-9A-Fa-f]{6}$", color))
+
+
+def insert_tag(name: str, color: str) -> Union[int, None]:
+    if not (name and color):
+        return None
+    if not _is_valid_hex_color(color):
+        return None
     return DB.table("tags").insert({"name": name, "color": color})
 
 

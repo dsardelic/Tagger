@@ -9,7 +9,7 @@ from pathtagger import db_operations, urls
 from Tagger import params
 
 
-# pylint: disable=too-many-public-methods,too-many-arguments
+# pylint: disable=too-many-public-methods,too-many-arguments,protected-access
 class TestDbOperations(unittest.TestCase):
     def setUp(self):
         test_db_path_str = (
@@ -160,13 +160,26 @@ class TestDbOperations(unittest.TestCase):
 
     @parameterized.expand(
         [
-            # TODO ("None name", None, None, False),
-            # TODO ("empty name", "", None, False),
-            # TODO ("new name with None color", "New tag", None, False),
-            # TODO ("new name with empty color", "New tag", "", False),
-            ("new name with uppercase color", "New tag", "#ABCDEF", True),
-            ("new name with lowercase color", "New tag", "#fedcba", True),
-            ("new name with mixed case color", "New tag", "#1A2b3C", True),
+            ("None", None, False),
+            ("empty", "", False),
+            ("no leading hash sign", "ABCDEF", False),
+            ("uppercase", "#ABCDEF", True),
+            ("lowercase", "#fedcba", True),
+            ("mixed case", "#1A2b3C", True),
+            ("too short", "#1A2b3", False),
+            ("too long", "#1A2b3C4", False),
+            ("invalid char", "#1A2b3Z", False),
+        ]
+    )
+    def test__is_valid_hex_color(self, _, color, exp_is_valid):
+        self.assertEqual(db_operations._is_valid_hex_color(color), exp_is_valid)
+
+    @parameterized.expand(
+        [
+            ("None name", None, None, False),
+            ("empty name", "", None, False),
+            ("new name with valid color", "New tag", "#1A2b3C", True),
+            ("new name with invalid color", "New tag", "#1A2b3Z", False),
             # TODO ("name already exists", "Videos", None, False),
         ]
     )
