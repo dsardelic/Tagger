@@ -797,14 +797,14 @@ class Test(SimpleTestCase):
         ]
     )
     @unittest.mock.patch.object(views.MyPath, "get_children")
-    @unittest.mock.patch.object(views.db, "get_tag_by_id")
+    @unittest.mock.patch.object(views.db, "get_tag")
     def test_mypath_children_data(
         self,
         mypath,
         is_dir,
         partial_exp_data,
         exp_tag_ids,
-        mock_get_tag_by_id,
+        mock_get_tag,
         mock_get_children,
     ):
         if is_dir:
@@ -823,8 +823,8 @@ class Test(SimpleTestCase):
                 self.assertEqual(act_item["db_path_str"], exp_item["db_path_str"])
                 self.assertEqual(act_item["name"], exp_item["name"])
                 if exp_tag_ids:
-                    mock_get_tag_by_id.assert_has_calls(
-                        [call(exp_tag_id) for exp_tag_id in exp_tag_ids]
+                    mock_get_tag.assert_has_calls(
+                        [call(tag_id=exp_tag_id) for exp_tag_id in exp_tag_ids]
                     )
 
     @parameterized.expand(

@@ -92,7 +92,7 @@ def get_extended_dataset(dataset):
         element["path_is_dir"] = mypath.abs_path.is_dir()
         if element.get("tag_ids", []):
             element["tags"] = [
-                db.get_tag_by_id(int(mapping_tag_id))
+                db.get_tag(tag_id=int(mapping_tag_id))
                 for mapping_tag_id in element["tag_ids"]
             ]
     return dataset
@@ -150,7 +150,7 @@ def create_tags(new_tag_names):
     if new_tag_names:
         for raw_name in new_tag_names.strip(",").split(","):
             name = raw_name.strip()
-            if name and not db.get_tag_by_name(name):
+            if name and not db.get_tag(name=name):
                 tag_ids.append(db.insert_tag(name, params.DEFAULT_TAG_COLOR))
     return tag_ids
 
@@ -216,7 +216,7 @@ def tag_details(request, tag_id):
     if request.method == "POST":
         if (
             (name := request.POST.get("name"))
-            and not db.get_tag_by_name(name)
+            and not db.get_tag(name=name)
             and (color := request.POST.get("color", params.DEFAULT_TAG_COLOR))
         ):
             db.update_tag(tag_id, name, color)
@@ -225,7 +225,7 @@ def tag_details(request, tag_id):
         request,
         "pathtagger/tag_details.html",
         {
-            "tag": db.get_tag_by_id(tag_id),
+            "tag": db.get_tag(tag_id=tag_id),
             "mappings": get_extended_dataset(db.get_tag_mappings(tag_id)),
         },
     )
@@ -234,7 +234,7 @@ def tag_details(request, tag_id):
 def add_tag(request):
     if (
         (name := request.POST.get("name"))
-        and not db.get_tag_by_name(name)
+        and not db.get_tag(name=name)
         and (color := request.POST.get("color", params.DEFAULT_TAG_COLOR))
     ):
         db.insert_tag(name, color)
@@ -284,7 +284,7 @@ def mypath_children_data(mypath: MyPath) -> List[Dict[str, str]]:
             "is_dir": mypath_child.abs_path.is_dir(),
             "tags": (
                 [
-                    db.get_tag_by_id(int(mapping_tag_id))
+                    db.get_tag(tag_id=int(mapping_tag_id))
                     for mapping_tag_id in mapping["tag_ids"]
                 ]
                 if (mapping := db.get_mapping_by_path(mypath_child.db_path_str))

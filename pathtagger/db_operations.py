@@ -39,8 +39,16 @@ def get_all_tags():
     return DB.table("tags").all()
 
 
-def get_tag_by_name(name: str):
-    return DB.table("tags").get(where("name") == name)
+def get_tag(tag_id: int = None, name: str = None):
+    if not (tag_id or name):
+        return None
+    tag = DB.table("tags").get(
+        doc_id=tag_id if tag_id else None,
+        cond=(where("name") == name) if name else None,
+    )
+    if tag_id and name:
+        return tag if tag["name"] == name else None
+    return tag
 
 
 def insert_tag(name: str, color: str):
@@ -64,12 +72,8 @@ def get_tag_mappings(tag_id: int):
     return DB.table("_default").search(Query().tag_ids.all([str(tag_id)]))
 
 
-def get_tag_by_id(tag_id: int):
-    return DB.table("tags").get(doc_id=tag_id)
-
-
 def update_tag(tag_id: int, name: str, color: str):
-    tag = get_tag_by_id(tag_id)
+    tag = get_tag(tag_id=tag_id)
     tag["name"] = name
     tag["color"] = color
     DB.table("tags").write_back([tag])

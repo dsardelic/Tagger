@@ -9,6 +9,7 @@ from pathtagger import db_operations, urls
 from Tagger import params
 
 
+# pylint: disable=too-many-public-methods,too-many-arguments
 class TestDbOperations(unittest.TestCase):
     def setUp(self):
         test_db_path_str = (
@@ -109,20 +110,53 @@ class TestDbOperations(unittest.TestCase):
 
     @parameterized.expand(
         [
-            ("existing tag name", "Videos", True, 2, "#307895"),
-            ("nonexistent tag name", "Movies", False, None, None),
+            ("id is None, name is None", None, None, False, None, None, None),
+            ("id is None, empty name ", None, "", False, None, None, None),
+            ("id is None, existing name", None, "Videos", True, 2, "Videos", "#307895"),
+            ("id is None, nonexistent name", None, "Movies", False, None, None, None),
+            ("existing id, name is None", 1, None, True, 1, "Music", "#a40000"),
+            ("nonexisting id, name is None", 4, None, False, None, None, None),
+            (
+                "existing id, existing name",
+                3,
+                "Documents",
+                True,
+                3,
+                "Documents",
+                "#bca455",
+            ),
+            ("existing id, nonexistent name", 3, "Dokumente", False, None, None, None),
         ]
     )
-    def test_get_tag_by_name(
-        self, _, tag_name, exp_get_successful, exp_tag_id, exp_tag_color
+    def test_get_tag(
+        self,
+        _,
+        tag_id,
+        tag_name,
+        exp_get_successful,
+        exp_tag_id,
+        exp_tag_name,
+        exp_tag_color,
     ):
-        tag = db_operations.get_tag_by_name(tag_name)
-        if exp_get_successful:
-            self.assertEqual(tag.doc_id, exp_tag_id)
-            self.assertEqual(tag["name"], tag_name)
-            self.assertEqual(tag["color"], exp_tag_color)
-        else:
-            self.assertIsNone(tag)
+        tag_id_variations = [{"tag_id": tag_id}]
+        if tag_id is None:
+            tag_id_variations.append({})
+        tag_name_variations = [{"name": tag_name}]
+        if tag_name is None:
+            tag_name_variations.append({})
+
+        for tag_id_variation in tag_id_variations:
+            for tag_name_variation in tag_name_variations:
+                with self.subTest({**tag_id_variation, **tag_name_variation}):
+                    tag = db_operations.get_tag(
+                        **{**tag_id_variation, **tag_name_variation}
+                    )
+                    if exp_get_successful:
+                        self.assertEqual(tag.doc_id, exp_tag_id)
+                        self.assertEqual(tag["name"], exp_tag_name)
+                        self.assertEqual(tag["color"], exp_tag_color)
+                    else:
+                        self.assertIsNone(tag)
 
     @parameterized.expand(
         [
@@ -138,20 +172,20 @@ class TestDbOperations(unittest.TestCase):
     )
     def test_insert_tag(self, _, tag_name, tag_color, exp_insert_successful):
         if tag_name:
-            tag_prev = db_operations.get_tag_by_name(tag_name)
+            tag_prev = db_operations.get_tag(name=tag_name)
         tags_count_prev = len(db_operations.get_all_tags())
         inserted_tag_id = db_operations.insert_tag(tag_name, tag_color)
         if exp_insert_successful:
             self.assertEqual(len(db_operations.get_all_tags()), tags_count_prev + 1)
             self.assertIsNone(tag_prev)
-            inserted_tag = db_operations.get_tag_by_id(inserted_tag_id)
+            inserted_tag = db_operations.get_tag(tag_id=inserted_tag_id)
             self.assertEqual(inserted_tag["name"], tag_name)
             self.assertEqual(inserted_tag["color"], tag_color)
         else:
             self.assertIsNone(inserted_tag_id)
             self.assertEqual(len(db_operations.get_all_tags()), tags_count_prev)
             if tag_name:
-                self.assertEqual(db_operations.get_tag_by_name(tag_name), tag_prev)
+                self.assertEqual(db_operations.get_tag(name=tag_name), tag_prev)
 
     @parameterized.expand(
         (
@@ -175,7 +209,7 @@ class TestDbOperations(unittest.TestCase):
             len(db_operations.get_all_mappings()), exp_remaining_mappings_count
         )
         self.assertTrue(
-            all(db_operations.get_tag_by_id(tag_id) is None for tag_id in tag_ids)
+            all(db_operations.get_tag(tag_id=tag_id) is None for tag_id in tag_ids)
         )
         self.assertTrue(
             all(
@@ -204,25 +238,6 @@ class TestDbOperations(unittest.TestCase):
 
     @parameterized.expand(
         (
-            (1, True, "Music", "#a40000"),
-            (2, True, "Videos", "#307895"),
-            (3, True, "Documents", "#bca455"),
-            (4, False, None, None),
-        )
-    )
-    def test_get_tag_by_id(
-        self, tag_id, exp_get_successful, exp_tag_name, exp_tag_color
-    ):
-        tag = db_operations.get_tag_by_id(tag_id)
-        if exp_get_successful:
-            self.assertEqual(tag.doc_id, tag_id)
-            self.assertEqual(tag["name"], exp_tag_name)
-            self.assertEqual(tag["color"], exp_tag_color)
-        else:
-            self.assertIsNone(tag)
-
-    @parameterized.expand(
-        (
             ("new tag name and new color", 2, "new tag name", "#ABCDEF"),
             ("new tag name and same color", 2, "new tag name", "#307895"),
             ("same tag name and new color", 2, "Videos", "#fedcba"),
@@ -232,7 +247,7 @@ class TestDbOperations(unittest.TestCase):
     def test_update_tag(self, _, tag_id, tag_name_new, tag_color_new):
         # assume valid and existing tag_id
         db_operations.update_tag(tag_id, tag_name_new, tag_color_new)
-        tag = db_operations.get_tag_by_id(tag_id)
+        tag = db_operations.get_tag(tag_id=tag_id)
         self.assertEqual(tag["name"], tag_name_new)
         self.assertEqual(tag["color"], tag_color_new)
 
