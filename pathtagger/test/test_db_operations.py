@@ -260,14 +260,27 @@ class TestDbOperations(unittest.TestCase):
 
     @parameterized.expand(
         (
-            ("name is None", 2, None, "#fedcba", False),
-            ("name empty", 2, "", "#fedcba", False),
-            ("same name, new color", 2, "Videos", "#fedcba", True),
+            ("name is None, color is None", 2, None, None, False),
+            ("name is None, empty color", 2, None, "", False),
+            ("name is None, invalid color", 2, None, "#fedcbZ", False),
+            ("name is None, same color", 2, None, "#307895", False),
+            ("name is None, new valid color", 2, None, "#307896", False),
+            ("empty name, color is None", 2, "", None, False),
+            ("empty name, empty color", 2, "", "", False),
+            ("empty name, invalid color", 2, "", "#fedcbZ", False),
+            ("empty name, same color", 2, "", "#307895", False),
+            ("empty name, new valid color", 2, "", "#307896", False),
+            ("new name, color is None", 2, "foo", None, False),
+            ("new name, empty color", 2, "foo", "", False),
+            ("new name, invalid color", 2, "foo", "#zedcba", False),
+            ("new name, same color", 2, "foo", "#307895", True),
+            ("new name, new valid color", 2, "foo", "#ABCDEF", True),
+            ("same name, color is None", 2, "Videos", None, False),
+            ("same name, empty color", 2, "Videos", "", False),
+            ("same name, invalid color", 2, "Videos", "#zedcba", False),
             ("same name, same color", 2, "Videos", "#307895", True),
-            ("new name, new color", 2, "new tag name", "#ABCDEF", True),
-            ("new name, same color", 2, "new tag name", "#307895", True),
-            ("invalid color", 2, "Videos", "#zedcba", False),
-            ("invalid tag_id", 1001, "new tag name", "#fedcba", False),
+            ("same name, new valid color", 2, "Videos", "#fedcba", True),
+            ("invalid id", 22, "Videos", "#fedcba", False),
         )
     )
     def test_update_tag(
