@@ -505,17 +505,24 @@ class TestDbOperations(unittest.TestCase):
 
     @parameterized.expand(
         (
-            ("different path", 1, "/new/mapping/path"),
-            ("same path", 1, "/home/dino/Music"),
+            ("path is None", 1, None, False),
+            ("empty path", 1, "", False),
+            ("same path", 1, "/home/dino/Music", True),
+            ("new valid path", 1, "/new/mapping/path", True),
+            ("invalid id", 111, "/new/mapping/path", False),
         )
     )
-    def test_update_mapping_path(self, _, mapping_id, path_str_new):
-        # assume valid and existing mapping_id
+    def test_update_mapping_path(
+        self, _, mapping_id, db_path_str, exp_update_successful
+    ):
         mapping_old = db_operations.get_mapping(mapping_id=mapping_id)
-        db_operations.update_mapping_path(mapping_id, path_str_new)
+        db_operations.update_mapping_path(mapping_id, db_path_str)
         mapping_new = db_operations.get_mapping(mapping_id=mapping_id)
-        self.assertEqual(mapping_new["path"], path_str_new)
-        self.assertEqual(mapping_new["tag_ids"], mapping_old["tag_ids"])
+        if exp_update_successful:
+            self.assertEqual(mapping_new["path"], db_path_str)
+            self.assertEqual(mapping_new["tag_ids"], mapping_old["tag_ids"])
+        else:
+            self.assertEqual(mapping_new, mapping_old)
 
     @parameterized.expand(
         (

@@ -157,8 +157,9 @@ def delete_mappings(mapping_ids: List[int]):
     remove_mappings_without_tags()
 
 
-def update_mapping_path(mapping_id: int, db_path_str: str):
-    DB.update({"path": db_path_str}, doc_ids=[mapping_id])
+def update_mapping_path(mapping_id: int, db_path_str: str) -> None:
+    if get_mapping(mapping_id=mapping_id) and db_path_str:
+        DB.update({"path": db_path_str}, doc_ids=[mapping_id])
 
 
 def get_filtered_mappings(
