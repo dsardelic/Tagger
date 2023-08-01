@@ -60,10 +60,8 @@ def _is_valid_hex_color(color: str) -> bool:
     return bool(re.fullmatch(r"^#[0-9A-Fa-f]{6}$", color))
 
 
-def insert_tag(name: str, color: str) -> Union[int, None]:
-    if not (name and color):
-        return None
-    if not _is_valid_hex_color(color):
+def insert_tag(name: str, color: str) -> Optional[int]:
+    if not (name and color) or not _is_valid_hex_color(color) or get_tag(name=name):
         return None
     return DB.table("tags").insert({"name": name, "color": color})
 
@@ -127,8 +125,10 @@ def get_all_mappings():
     return DB.all()
 
 
-def insert_mapping(db_path_str: str, tag_ids: Union[List[int], None] = None):
-    if db_path_str:
+def insert_mapping(
+    db_path_str: str, tag_ids: Union[List[int], None] = None
+) -> Optional[int]:
+    if db_path_str and not get_mapping(db_path_str=db_path_str):
         valid_tag_ids = set(tag_ids) if tag_ids else set()
         if tag_ids:
             invalid_tag_ids = {

@@ -184,7 +184,10 @@ class TestDbOperations(unittest.TestCase):
             ("new name, empty color", "New tag", "", False),
             ("new name, valid color", "New tag", "#1A2b3C", True),
             ("new name, invalid color", "New tag", "#1A2b3Z", False),
-            # TODO ("name already exists", "Videos", None, False),
+            ("existing name, color is None", "Videos", None, False),
+            ("existing name, empty color", "Videos", "", False),
+            ("existing name, valid color", "Videos", "#974511", False),
+            ("existing name, invalid color", "Videos", "#GGHHII", False),
         ]
     )
     def test_insert_tag(self, _, tag_name, tag_color, exp_insert_successful):
@@ -417,7 +420,29 @@ class TestDbOperations(unittest.TestCase):
             ("new path, all valid tag_ids", "/foo", [1, 3], True, ["1", "3"]),
             ("new path, all invalid tag_ids", "/foo", [11, 12], True, []),
             ("new path, valid and invalid tag_ids", "/foo", [1, 12], True, ["1"]),
-            # TODO ("existing path, tag_ids is None", "/home/dino/Videos", None, True, []),
+            ("existing path, tag_ids is None", "/home/dino/Videos", None, False, None),
+            ("existing path, empty tag_ids", "/home/dino/Videos", [], False, None),
+            (
+                "existing path, all valid tag_ids",
+                "/home/dino/Videos",
+                [1, 3],
+                False,
+                None,
+            ),
+            (
+                "existing path, all invalid tag_ids",
+                "/home/dino/Videos",
+                [11, 12],
+                False,
+                None,
+            ),
+            (
+                "existing path, valid and invalid tag_ids",
+                "/home/dino/Videos",
+                [1, 12],
+                False,
+                None,
+            ),
         )
     )
     def test_insert_mapping(
