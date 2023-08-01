@@ -93,12 +93,22 @@ def update_tag(tag_id: int, name: str, color: str):
     DB.table("tags").write_back([tag])
 
 
-def get_mapping(mapping_id: int):
-    return DB.get(doc_id=mapping_id)
+def get_mapping(*, mapping_id: int = None, db_path_str: str = None):
+    if not (mapping_id or db_path_str):
+        return None
+    if db_path_str is not None and len(db_path_str) < 1:
+        return None
+    mapping = DB.get(
+        doc_id=mapping_id if mapping_id else None,
+        cond=(where("path") == db_path_str) if db_path_str else None,
+    )
+    if mapping and db_path_str:
+        return mapping if mapping["path"] == db_path_str else None
+    return mapping
 
 
 def remove_tags_from_mappings(tag_ids: List[int], mapping_ids: List[int]):
-    mappings = [get_mapping(mapping_id) for mapping_id in mapping_ids]
+    mappings = [get_mapping(mapping_id=mapping_id) for mapping_id in mapping_ids]
     for mapping in mappings:
         mapping["tag_ids"] = list(
             set(mapping["tag_ids"]) - {str(tag_id) for tag_id in tag_ids}
@@ -124,10 +134,6 @@ def insert_mapping(db_path_str: str, tag_ids: Union[List[int], None] = None):
             }
         )
     return None
-
-
-def get_mapping_by_path(db_path_str: str):
-    return DB.get(where("path") == db_path_str)
 
 
 def delete_mappings(mapping_ids: List[int]):
@@ -163,7 +169,7 @@ def get_filtered_mappings(
 
 
 def append_tags_to_mappings(tag_ids: List[int], mapping_ids: List[int]):
-    mappings = [get_mapping(mapping_id) for mapping_id in mapping_ids]
+    mappings = [get_mapping(mapping_id=mapping_id) for mapping_id in mapping_ids]
     for mapping in mappings:
         mapping["tag_ids"] = list(
             set(mapping["tag_ids"]) | {str(tag_id) for tag_id in tag_ids}

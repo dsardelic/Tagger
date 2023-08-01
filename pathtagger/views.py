@@ -121,13 +121,19 @@ def mapping_details(request, mapping_id):
     return render(
         request,
         "pathtagger/mapping_details.html",
-        {"mapping": get_extended_dataset([db.get_mapping(mapping_id)]).pop()},
+        {
+            "mapping": get_extended_dataset(
+                [db.get_mapping(mapping_id=mapping_id)]
+            ).pop()
+        },
     )
 
 
 def add_mapping(request):
     mypath = MyPath(request.POST.get("path"), True)
-    if mypath.is_valid_db_path_str and not db.get_mapping_by_path(mypath.db_path_str):
+    if mypath.is_valid_db_path_str and not db.get_mapping(
+        db_path_str=mypath.db_path_str
+    ):
         db.insert_mapping(mypath.db_path_str, [])
     return redirect("pathtagger:mappings_list")
 
@@ -287,7 +293,7 @@ def mypath_children_data(mypath: MyPath) -> List[Dict[str, str]]:
                     db.get_tag(tag_id=int(mapping_tag_id))
                     for mapping_tag_id in mapping["tag_ids"]
                 ]
-                if (mapping := db.get_mapping_by_path(mypath_child.db_path_str))
+                if (mapping := db.get_mapping(db_path_str=mypath_child.db_path_str))
                 and mapping.get("tag_ids", [])
                 else []
             ),
@@ -332,7 +338,7 @@ def edit_path_tags(request):
         mapping_ids = []
         for raw_path_str in raw_path_strs:
             mypath = MyPath(raw_path_str, True)
-            if mapping := db.get_mapping_by_path(mypath.db_path_str):
+            if mapping := db.get_mapping(db_path_str=mypath.db_path_str):
                 mapping_ids.append(mapping.doc_id)
             else:
                 mapping_ids.append(db.insert_mapping(mypath.db_path_str, []))

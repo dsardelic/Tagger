@@ -275,30 +275,75 @@ class TestDbOperations(unittest.TestCase):
 
     @parameterized.expand(
         (
-            (1, True, "/home/dino/Music", ["1"]),
-            (2, True, "/home/dino/Videos", ["2"]),
-            (3, True, "/home/dino/Documents", ["3"]),
-            (4, True, "/home/dino/Downloads", ["1", "2", "3"]),
-            (5, True, "/media", ["1", "2"]),
-            (6, True, "/home/dino/Pictures/wallpaper.jpg", []),
-            (7, False, None, None),
+            ("id is None, path is None", None, None, False, None, None, None),
+            ("id is None, empty path", None, "", False, None, None, None),
+            (
+                "id is None, path exists",
+                None,
+                "/home/dino/Documents",
+                True,
+                3,
+                "/home/dino/Documents",
+                ["3"],
+            ),
+            ("id is None, nonexistint path", None, "/foo", False, None, None, None),
+            ("existing id, path is None", 1, None, True, 1, "/home/dino/Music", ["1"]),
+            ("existing id, empty path", 1, "", False, None, None, None),
+            (
+                "existing id, correct path",
+                1,
+                "/home/dino/Music",
+                True,
+                1,
+                "/home/dino/Music",
+                ["1"],
+            ),
+            ("existing id, wrong path", 1, "/foo", False, None, None, None),
+            ("nonexistent id, path is None", 1001, None, False, None, None, None),
+            ("nonexistent id, empty path", 1001, "", False, None, None, None),
+            ("nonexistent id, path exists", 1001, "/media", False, None, None, None),
+            ("nonexistent id, nonexistent path", 1001, "/foo", False, None, None, None),
         )
     )
-    def test_get_mapping(self, mapping_id, exp_get_successful, exp_path, exp_tag_ids):
-        mapping = db_operations.get_mapping(mapping_id)
-        if exp_get_successful:
-            self.assertEqual(mapping.doc_id, mapping_id)
-            self.assertEqual(mapping["path"], exp_path)
-            self.assertEqual(mapping["tag_ids"], exp_tag_ids)
-        else:
-            self.assertIsNone(mapping)
+    def test_get_mapping(
+        self,
+        _,
+        mapping_id,
+        mapping_path,
+        exp_get_successful,
+        exp_mapping_id,
+        exp_mapping_path,
+        exp_tag_ids,
+    ):
+        mapping_id_variations = [{"mapping_id": mapping_id}]
+        if mapping_id is None:
+            mapping_id_variations.append({})
+        mapping_path_variations = [{"db_path_str": mapping_path}]
+        if mapping_path is None:
+            mapping_path_variations.append({})
+
+        for mapping_id_variation in mapping_id_variations:
+            for mapping_path_variation in mapping_path_variations:
+                with self.subTest({**mapping_id_variation, **mapping_path_variation}):
+                    mapping = db_operations.get_mapping(
+                        **{**mapping_id_variation, **mapping_path_variation}
+                    )
+                    if exp_get_successful:
+                        self.assertEqual(mapping.doc_id, exp_mapping_id)
+                        self.assertEqual(mapping["path"], exp_mapping_path)
+                        self.assertEqual(mapping["tag_ids"], exp_tag_ids)
+                    else:
+                        self.assertIsNone(mapping)
 
     def test_remove_tags_from_mappings(self):
         # assume all tag_ids are valid and exist
         # assume all mapping_ids are valid and exist
         tag_ids = [1, 3]
         mapping_ids = [1, 2, 4, 5, 6]
-        mappings = [db_operations.get_mapping(mapping_id) for mapping_id in mapping_ids]
+        mappings = [
+            db_operations.get_mapping(mapping_id=mapping_id)
+            for mapping_id in mapping_ids
+        ]
         self.assertEqual(len(db_operations.get_all_mappings()), 6)
         self.assertTrue(
             all(
@@ -311,7 +356,7 @@ class TestDbOperations(unittest.TestCase):
         mappings = [
             mapping
             for mapping_id in mapping_ids
-            if (mapping := db_operations.get_mapping(mapping_id))
+            if (mapping := db_operations.get_mapping(mapping_id=mapping_id))
         ]
         self.assertTrue(
             all(
@@ -319,7 +364,7 @@ class TestDbOperations(unittest.TestCase):
                 for tag_id in tag_ids
             )
         )
-        self.assertTrue("3" in db_operations.get_mapping(3)["tag_ids"])
+        self.assertTrue("3" in db_operations.get_mapping(mapping_id=3)["tag_ids"])
 
     def test_remove_mappings_without_tags(self):
         self.assertEqual(len(db_operations.get_all_mappings()), 6)
@@ -372,7 +417,7 @@ class TestDbOperations(unittest.TestCase):
     def test_insert_mapping(
         self, _, path_str, exp_insert_successful, tag_ids, exp_tag_ids
     ):
-        mapping_prev = db_operations.get_mapping_by_path(path_str)
+        mapping_prev = db_operations.get_mapping(db_path_str=path_str)
         mappings_count_prev = len(db_operations.get_all_mappings())
         inserted_mapping_id = db_operations.insert_mapping(path_str, tag_ids)
         if exp_insert_successful:
@@ -380,30 +425,15 @@ class TestDbOperations(unittest.TestCase):
                 len(db_operations.get_all_mappings()), mappings_count_prev + 1
             )
             self.assertIsNone(mapping_prev)
-            inserted_mapping = db_operations.get_mapping(inserted_mapping_id)
+            inserted_mapping = db_operations.get_mapping(mapping_id=inserted_mapping_id)
             self.assertEqual(inserted_mapping["path"], path_str)
             self.assertEqual(inserted_mapping["tag_ids"], exp_tag_ids)
         else:
             self.assertIsNone(inserted_mapping_id)
             self.assertEqual(len(db_operations.get_all_mappings()), mappings_count_prev)
-            self.assertEqual(db_operations.get_mapping_by_path(path_str), mapping_prev)
-
-    @parameterized.expand(
-        (
-            ("existing mapping path", "/home/dino/Downloads", True, 4, ["1", "2", "3"]),
-            ("nonexistent mapping path", "/foo", False, None, None),
-        )
-    )
-    def test_get_mapping_by_path(
-        self, _, mapping_path, exp_mapping_found, exp_mapping_id, exp_mapping_tag_ids
-    ):
-        mapping = db_operations.get_mapping_by_path(mapping_path)
-        if exp_mapping_found:
-            self.assertEqual(mapping.doc_id, exp_mapping_id)
-            self.assertEqual(mapping["path"], mapping_path)
-            self.assertEqual(mapping["tag_ids"], exp_mapping_tag_ids)
-        else:
-            self.assertIsNone(mapping)
+            self.assertEqual(
+                db_operations.get_mapping(db_path_str=path_str), mapping_prev
+            )
 
     @parameterized.expand(
         (
@@ -420,7 +450,7 @@ class TestDbOperations(unittest.TestCase):
         )
         self.assertTrue(
             all(
-                db_operations.get_mapping(mapping_id) is None
+                db_operations.get_mapping(mapping_id=mapping_id) is None
                 for mapping_id in mapping_ids
             )
         )
@@ -433,9 +463,9 @@ class TestDbOperations(unittest.TestCase):
     )
     def test_update_mapping_path(self, _, mapping_id, path_str_new):
         # assume valid and existing mapping_id
-        mapping_old = db_operations.get_mapping(mapping_id)
+        mapping_old = db_operations.get_mapping(mapping_id=mapping_id)
         db_operations.update_mapping_path(mapping_id, path_str_new)
-        mapping_new = db_operations.get_mapping(mapping_id)
+        mapping_new = db_operations.get_mapping(mapping_id=mapping_id)
         self.assertEqual(mapping_new["path"], path_str_new)
         self.assertEqual(mapping_new["tag_ids"], mapping_old["tag_ids"])
 
@@ -485,9 +515,10 @@ class TestDbOperations(unittest.TestCase):
         db_operations.append_tags_to_mappings(tag_ids, mapping_ids)
         self.assertTrue(
             all(
-                str(tag_id) in db_operations.get_mapping(mapping_id)["tag_ids"]
+                str(tag_id)
+                in db_operations.get_mapping(mapping_id=mapping_id)["tag_ids"]
                 for mapping_id in mapping_ids
                 for tag_id in tag_ids
             )
         )
-        self.assertTrue("1" not in db_operations.get_mapping(2)["tag_ids"])
+        self.assertTrue("1" not in db_operations.get_mapping(mapping_id=2)["tag_ids"])
