@@ -114,18 +114,14 @@ class TestDbOperations(unittest.TestCase):
             ("id is None, empty name ", None, "", False, None, None, None),
             ("id is None, existing name", None, "Videos", True, 2, "Videos", "#307895"),
             ("id is None, nonexistent name", None, "Movies", False, None, None, None),
-            ("existing id, name is None", 1, None, True, 1, "Music", "#a40000"),
-            ("nonexisting id, name is None", 4, None, False, None, None, None),
-            (
-                "existing id, existing name",
-                3,
-                "Documents",
-                True,
-                3,
-                "Documents",
-                "#bca455",
-            ),
-            ("existing id, nonexistent name", 3, "Dokumente", False, None, None, None),
+            ("id exists, name is None", 1, None, True, 1, "Music", "#a40000"),
+            ("id exists, empty name", 1, "", False, None, None, None),
+            ("id exists, right name", 1, "Music", True, 1, "Music", "#a40000"),
+            ("id exists, wrong name", 1, "Heavy metal", False, None, None, None),
+            ("nonexisting id, name is None", 1001, None, False, None, None, None),
+            ("nonexisting id, empty name", 1001, "", False, None, None, None),
+            ("nonexisting id, existing name", 1001, "Music", False, None, None, None),
+            ("nonexisting id, nonexisting name", 1001, "Jazz", False, None, None, None),
         ]
     )
     def test_get_tag(

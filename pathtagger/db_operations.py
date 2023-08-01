@@ -40,14 +40,16 @@ def get_all_tags():
     return DB.table("tags").all()
 
 
-def get_tag(tag_id: int = None, name: str = None):
+def get_tag(*, tag_id: int = None, name: str = None):
     if not (tag_id or name):
+        return None
+    if name is not None and len(name) < 1:
         return None
     tag = DB.table("tags").get(
         doc_id=tag_id if tag_id else None,
         cond=(where("name") == name) if name else None,
     )
-    if tag_id and name:
+    if tag and name:
         return tag if tag["name"] == name else None
     return tag
 
