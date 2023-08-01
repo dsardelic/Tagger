@@ -39,7 +39,9 @@ class TestDbOperations(unittest.TestCase):
 
     @parameterized.expand(
         [
-            ("existing favorite path", "/", True, 2),
+            ("path is None", None, False, None),
+            ("empty path", "", False, None),
+            ("existing path", "/", True, 2),
             ("nonexistent path", "/foo", False, None),
         ]
     )
@@ -55,10 +57,10 @@ class TestDbOperations(unittest.TestCase):
 
     @parameterized.expand(
         [
-            # TODO ("None path", None, False),
-            # TODO ("empty path", "", False),
-            ("new path", "/new/favorite/path", True),
-            # TODO ("existing path", "/home/dino/Music", False),
+            ("path is None", None, False),
+            ("empty path", "", False),
+            ("existing path", "/home/dino/Music", False),
+            ("nonexistent path", "/new/favorite/path", True),
         ]
     )
     def test_insert_favorite(self, _, path_str, exp_insert_successful):
@@ -81,8 +83,10 @@ class TestDbOperations(unittest.TestCase):
 
     @parameterized.expand(
         [
-            ("existing favorite path", "/home/dino/Music", 1),
-            ("nonexistent favorite path", "/foo", 2),
+            ("path is None", None, 2),
+            ("empty path", "", 2),
+            ("existing path", "/home/dino/Music", 1),
+            ("nonexistent path", "/foo", 2),
         ]
     )
     def test_delete_favorite(self, _, mapping_path, exp_remaining_favorites_count):

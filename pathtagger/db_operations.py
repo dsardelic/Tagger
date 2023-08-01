@@ -25,10 +25,14 @@ def get_all_favorites():
 
 
 def get_favorite(db_path_str: str):
+    if not db_path_str:
+        return None
     return DB.table("favorite_paths").get(where("path") == db_path_str)
 
 
 def insert_favorite(db_path_str: str):
+    if not db_path_str or get_favorite(db_path_str):
+        return None
     return DB.table("favorite_paths").insert({"path": db_path_str})
 
 
