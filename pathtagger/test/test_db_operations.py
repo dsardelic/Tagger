@@ -172,29 +172,35 @@ class TestDbOperations(unittest.TestCase):
 
     @parameterized.expand(
         [
-            ("None name", None, None, False),
-            ("empty name", "", None, False),
-            ("new name with valid color", "New tag", "#1A2b3C", True),
-            ("new name with invalid color", "New tag", "#1A2b3Z", False),
+            ("name is None, color is None", None, None, False),
+            ("name is None, empty color", None, "", False),
+            ("name is None, valid color", None, "#1A2b3C", False),
+            ("name is None, invalid color", None, "#1A2b3Z", False),
+            ("empty name, color is None", "", None, False),
+            ("empty name, empty color", "", "", False),
+            ("empty name, valid color", "", "#1A2b3C", False),
+            ("empty name, invalid color", "", "#1A2b3Z", False),
+            ("new name, color is None", "New tag", None, False),
+            ("new name, empty color", "New tag", "", False),
+            ("new name, valid color", "New tag", "#1A2b3C", True),
+            ("new name, invalid color", "New tag", "#1A2b3Z", False),
             # TODO ("name already exists", "Videos", None, False),
         ]
     )
     def test_insert_tag(self, _, tag_name, tag_color, exp_insert_successful):
-        if tag_name:
-            tag_prev = db_operations.get_tag(name=tag_name)
-        tags_count_prev = len(db_operations.get_all_tags())
+        tag_old = db_operations.get_tag(name=tag_name)
+        tags_count_old = len(db_operations.get_all_tags())
         inserted_tag_id = db_operations.insert_tag(tag_name, tag_color)
         if exp_insert_successful:
-            self.assertEqual(len(db_operations.get_all_tags()), tags_count_prev + 1)
-            self.assertIsNone(tag_prev)
+            self.assertEqual(len(db_operations.get_all_tags()), tags_count_old + 1)
+            self.assertIsNone(tag_old)
             inserted_tag = db_operations.get_tag(tag_id=inserted_tag_id)
             self.assertEqual(inserted_tag["name"], tag_name)
             self.assertEqual(inserted_tag["color"], tag_color)
         else:
             self.assertIsNone(inserted_tag_id)
-            self.assertEqual(len(db_operations.get_all_tags()), tags_count_prev)
-            if tag_name:
-                self.assertEqual(db_operations.get_tag(name=tag_name), tag_prev)
+            self.assertEqual(len(db_operations.get_all_tags()), tags_count_old)
+            self.assertEqual(db_operations.get_tag(name=tag_name), tag_old)
 
     @parameterized.expand(
         (
