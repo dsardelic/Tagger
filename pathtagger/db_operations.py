@@ -84,7 +84,10 @@ def get_tag_mappings(tag_id: int):
 
 
 def update_tag(tag_id: int, name: str, color: str):
-    tag = get_tag(tag_id=tag_id)
+    if not (tag_id and name and color) or not _is_valid_hex_color(color):
+        return
+    if not (tag := get_tag(tag_id=tag_id)):
+        return
     tag["name"] = name
     tag["color"] = color
     DB.table("tags").write_back([tag])

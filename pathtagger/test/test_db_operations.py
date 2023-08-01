@@ -251,18 +251,27 @@ class TestDbOperations(unittest.TestCase):
 
     @parameterized.expand(
         (
-            ("new tag name and new color", 2, "new tag name", "#ABCDEF"),
-            ("new tag name and same color", 2, "new tag name", "#307895"),
-            ("same tag name and new color", 2, "Videos", "#fedcba"),
-            ("same tag name and same color", 2, "Videos", "#307895"),
+            ("name is None", 2, None, "#fedcba", False),
+            ("name empty", 2, "", "#fedcba", False),
+            ("same name, new color", 2, "Videos", "#fedcba", True),
+            ("same name, same color", 2, "Videos", "#307895", True),
+            ("new name, new color", 2, "new tag name", "#ABCDEF", True),
+            ("new name, same color", 2, "new tag name", "#307895", True),
+            ("invalid color", 2, "Videos", "#zedcba", False),
+            ("invalid tag_id", 1001, "new tag name", "#fedcba", False),
         )
     )
-    def test_update_tag(self, _, tag_id, tag_name_new, tag_color_new):
-        # assume valid and existing tag_id
+    def test_update_tag(
+        self, _, tag_id, tag_name_new, tag_color_new, exp_update_successful
+    ):
+        tag_old = db_operations.get_tag(tag_id=tag_id)
         db_operations.update_tag(tag_id, tag_name_new, tag_color_new)
-        tag = db_operations.get_tag(tag_id=tag_id)
-        self.assertEqual(tag["name"], tag_name_new)
-        self.assertEqual(tag["color"], tag_color_new)
+        tag_updated = db_operations.get_tag(tag_id=tag_id)
+        if exp_update_successful:
+            self.assertEqual(tag_updated["name"], tag_name_new)
+            self.assertEqual(tag_updated["color"], tag_color_new)
+        else:
+            self.assertEqual(tag_updated, tag_old)
 
     @parameterized.expand(
         (
