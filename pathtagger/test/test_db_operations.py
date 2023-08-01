@@ -396,31 +396,35 @@ class TestDbOperations(unittest.TestCase):
 
     @parameterized.expand(
         (
-            ("None path", None, False, None, None),
-            ("empty path", "", False, None, None),
-            ("tag_ids None", "/foo", True, None, []),
-            ("tag_ids empty", "/foo", True, [], []),
-            (
-                "new path with valid tag_ids",
-                "/foo",
-                True,
-                [1, 3],
-                ["1", "3"],
-            ),
-            # TODO ("existing path", "/home/dino/Videos", False, None, None),
+            ("path is None, tag_ids is None", None, None, False, None),
+            ("path is None, empty tag_ids", None, [], False, None),
+            ("path is None, all valid tag_ids", None, [1, 2, 3], False, None),
+            ("path is None, all invalid tag_ids", None, [11, 12], False, None),
+            ("path is None, valid and invalid tag_ids", None, [1, 12], False, None),
+            ("empty path, tag_ids is None", "", None, False, None),
+            ("empty path, empty tag_ids", "", [], False, None),
+            ("empty path, all valid tag_ids", "", [1, 2, 3], False, None),
+            ("empty path, all invalid tag_ids", "", [11, 12], False, None),
+            ("empty path, valid and invalid tag_ids", "", [1, 12], False, None),
+            ("new path, tag_ids is None", "/foo", None, True, []),
+            ("new path, empty tag_ids", "/foo", [], True, []),
+            ("new path, all valid tag_ids", "/foo", [1, 3], True, ["1", "3"]),
+            ("new path, all invalid tag_ids", "/foo", [11, 12], True, []),
+            ("new path, valid and invalid tag_ids", "/foo", [1, 12], True, ["1"]),
+            # TODO ("existing path, tag_ids is None", "/home/dino/Videos", None, True, []),
         )
     )
     def test_insert_mapping(
-        self, _, path_str, exp_insert_successful, tag_ids, exp_tag_ids
+        self, _, path_str, tag_ids, exp_insert_successful, exp_tag_ids
     ):
-        mapping_prev = db_operations.get_mapping(db_path_str=path_str)
+        mapping_old = db_operations.get_mapping(db_path_str=path_str)
         mappings_count_prev = len(db_operations.get_all_mappings())
         inserted_mapping_id = db_operations.insert_mapping(path_str, tag_ids)
         if exp_insert_successful:
             self.assertEqual(
                 len(db_operations.get_all_mappings()), mappings_count_prev + 1
             )
-            self.assertIsNone(mapping_prev)
+            self.assertIsNone(mapping_old)
             inserted_mapping = db_operations.get_mapping(mapping_id=inserted_mapping_id)
             self.assertEqual(inserted_mapping["path"], path_str)
             self.assertEqual(inserted_mapping["tag_ids"], exp_tag_ids)
@@ -428,7 +432,7 @@ class TestDbOperations(unittest.TestCase):
             self.assertIsNone(inserted_mapping_id)
             self.assertEqual(len(db_operations.get_all_mappings()), mappings_count_prev)
             self.assertEqual(
-                db_operations.get_mapping(db_path_str=path_str), mapping_prev
+                db_operations.get_mapping(db_path_str=path_str), mapping_old
             )
 
     @parameterized.expand(

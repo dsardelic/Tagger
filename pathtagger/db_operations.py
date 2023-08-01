@@ -129,10 +129,18 @@ def get_all_mappings():
 
 def insert_mapping(db_path_str: str, tag_ids: Union[List[int], None] = None):
     if db_path_str:
+        valid_tag_ids = set(tag_ids) if tag_ids else set()
+        if tag_ids:
+            invalid_tag_ids = {
+                tag_id for tag_id in set(tag_ids) if not get_tag(tag_id=tag_id)
+            }
+            valid_tag_ids = set(tag_ids) - set(invalid_tag_ids)
         return DB.insert(
             {
                 "path": db_path_str,
-                "tag_ids": [str(tag_id) for tag_id in tag_ids] if tag_ids else [],
+                "tag_ids": (
+                    [str(tag_id) for tag_id in valid_tag_ids] if valid_tag_ids else []
+                ),
             }
         )
     return None
