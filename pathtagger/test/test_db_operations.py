@@ -364,7 +364,7 @@ class TestDbOperations(unittest.TestCase):
                 "/foo",
                 True,
                 [1, 3],
-                [1, 3],
+                ["1", "3"],
             ),
             # TODO ("existing path", "/home/dino/Videos", False, None, None),
         )

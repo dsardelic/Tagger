@@ -115,9 +115,14 @@ def get_all_mappings():
     return DB.all()
 
 
-def insert_mapping(db_path_str: str, tag_ids: Optional[List[int]] = None):
+def insert_mapping(db_path_str: str, tag_ids: Union[List[int], None] = None):
     if db_path_str:
-        return DB.insert({"path": db_path_str, "tag_ids": tag_ids or []})
+        return DB.insert(
+            {
+                "path": db_path_str,
+                "tag_ids": [str(tag_id) for tag_id in tag_ids] if tag_ids else [],
+            }
+        )
     return None
 
 
