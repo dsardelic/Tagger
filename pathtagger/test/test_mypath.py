@@ -1,3 +1,4 @@
+import logging
 import unittest
 from pathlib import Path
 
@@ -7,6 +8,14 @@ from Tagger import params
 
 # pylint: disable=R0904
 class TestMyPath(unittest.TestCase):
+    def setUp(self) -> None:
+        logging.disable(logging.CRITICAL)
+        unittest.TestCase.setUp(self)
+
+    def tearDown(self) -> None:
+        unittest.TestCase.tearDown(self)
+        logging.disable(logging.NOTSET)
+
     def test_no_base_path(self):
         test_data = [
             (

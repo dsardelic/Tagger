@@ -1,3 +1,4 @@
+import logging
 import os
 import unittest.mock
 from ast import literal_eval
@@ -32,6 +33,7 @@ def _table_row_count(soup, element_id):
 # pylint: disable=R0913,R0904
 class Test(SimpleTestCase):
     def setUp(self):
+        logging.disable(logging.CRITICAL)
         self.client = Client()
         test_db_path_str = (
             apps.get_app_config(urls.app_name).path + "/test/resources/TaggerDB.json"
@@ -47,6 +49,7 @@ class Test(SimpleTestCase):
 
     def tearDown(self):
         os.remove(self.db_tmp_file_name)
+        logging.disable(logging.NOTSET)
 
     def test_get_extended_dataset(self):
         docs = db_operations.get_all_mappings()
@@ -545,11 +548,12 @@ class Test(SimpleTestCase):
 
     @parameterized.expand(
         [
-            ("no name", None, "#AB3456", "#AB3456", False),
-            ("empty name", "", "#AB3456", "#AB3456", False),
-            ("name already exists", "Videos", "#AB3456", "#AB3456", False),
-            ("no color", "New tag name", None, params.DEFAULT_TAG_COLOR, True),
-            ("empty color", "New tag name", "", "", False),
+            ("name is None", None, "#AB3456", None, False),
+            ("empty name", "", "#AB3456", None, False),
+            ("color is None", "New tag name", None, None, False),
+            ("empty color", "New tag name", "", None, False),
+            ("own name", "Videos", "#AB3456", "#AB3456", True),
+            ("some other existing name", "Music", "#AB3456", "#AB3456", True),
             ("valid name and color", "New tag name", "#AB3456", "#AB3456", True),
         ]
     )
@@ -579,11 +583,11 @@ class Test(SimpleTestCase):
 
     @parameterized.expand(
         [
-            ("no name", None, "#AB3456", "#AB3456", False),
+            ("name is None", None, "#AB3456", "#AB3456", False),
             ("empty name", "", "#AB3456", "#AB3456", False),
-            ("name already exists", "Videos", "#AB3456", "#AB3456", False),
+            ("name already exists", "Videos", "#AB3456", "#AB3456", True),
             ("no color", "New tag name", None, params.DEFAULT_TAG_COLOR, True),
-            ("empty color", "New tag name", "", "", False),
+            ("empty color", "New tag name", "", params.DEFAULT_TAG_COLOR, True),
             ("valid name and color", "New tag name", "#AB3456", "#AB3456", True),
         ]
     )

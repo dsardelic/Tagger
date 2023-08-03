@@ -1,3 +1,4 @@
+import logging
 import os
 import unittest
 from tempfile import NamedTemporaryFile
@@ -12,6 +13,7 @@ from Tagger import params
 # pylint: disable=too-many-public-methods,too-many-arguments,protected-access
 class TestDbOperations(unittest.TestCase):
     def setUp(self):
+        logging.disable(logging.CRITICAL)
         test_db_path_str = (
             apps.get_app_config(urls.app_name).path + "/test/resources/TaggerDB.json"
         )
@@ -25,6 +27,115 @@ class TestDbOperations(unittest.TestCase):
 
     def tearDown(self):
         os.remove(self.db_tmp_file_name)
+        logging.disable(logging.NOTSET)
+
+    @parameterized.expand(
+        [
+            ("doc_ids is None", None, [1, 2], set(), set(), set()),
+            ("reference is None", [1, 2], None, set(), set(), set()),
+            ("truthy doc_ids, empty reference", [1, 2], {}, set(), set(), set()),
+            (
+                "empty doc_ids, truthy reference",
+                [],
+                {1, 2, 3, 4, 5, 6},
+                set(),
+                set(),
+                set(),
+            ),
+            ("0-0-1", [4], {1, 2, 3, 4, 5, 6}, set(), set(), {4}),
+            ("0-0-many", [4, 5], {1, 2, 3, 4, 5, 6}, set(), set(), {4, 5}),
+            ("0-1-0", [11], {1, 2, 3, 4, 5, 6}, set(), {11}, set()),
+            ("0-1-1", [1, 11], {1, 2, 3, 4, 5, 6}, set(), {11}, {1}),
+            ("0-1-many", [1, 2, 11], {1, 2, 3, 4, 5, 6}, set(), {11}, {1, 2}),
+            ("0-many-0", [11, 12], {1, 2, 3, 4, 5, 6}, set(), {11, 12}, set()),
+            ("0-many-1", [3, 11, 12], {1, 2, 3, 4, 5, 6}, set(), {11, 12}, {3}),
+            (
+                "0-many-many",
+                [4, 5, 11, 12],
+                {1, 2, 3, 4, 5, 6},
+                set(),
+                {11, 12},
+                {4, 5},
+            ),
+            ("1-0-0", [None], {1, 2, 3, 4, 5, 6}, {None}, set(), set()),
+            ("1-0-1", [None, 1], {1, 2, 3, 4, 5, 6}, {None}, set(), {1}),
+            ("1-0-many", [None, 1, 2], {1, 2, 3, 4, 5, 6}, {None}, set(), {1, 2}),
+            ("1-1-0", [None, 11], {1, 2, 3, 4, 5, 6}, {None}, {11}, set()),
+            ("1-1-1", [None, 11, 2], {1, 2, 3, 4, 5, 6}, {None}, {11}, {2}),
+            ("1-1-many", [None, 11, 1, 2], {1, 2, 3, 4, 5, 6}, {None}, {11}, {1, 2}),
+            ("1-many-0", [None, 11, 12], {1, 2, 3, 4, 5, 6}, {None}, {11, 12}, set()),
+            ("1-many-1", [None, 11, 12, 3], {1, 2, 3, 4, 5, 6}, {None}, {11, 12}, {3}),
+            (
+                "1-many-many",
+                [None, 11, 12, 4, 5],
+                {1, 2, 3, 4, 5, 6},
+                {None},
+                {11, 12},
+                {4, 5},
+            ),
+            ("many-0-0", [None, 0], {1, 2, 3, 4, 5, 6}, {None, 0}, set(), set()),
+            ("many-0-1", [None, 0, 4], {1, 2, 3, 4, 5, 6}, {None, 0}, set(), {4}),
+            (
+                "many-0-many",
+                [None, 0, 5, 6],
+                {1, 2, 3, 4, 5, 6},
+                {None, 0},
+                set(),
+                {5, 6},
+            ),
+            ("many-1-0", [None, 0, 15], {1, 2, 3, 4, 5, 6}, {None, 0}, {15}, set()),
+            ("many-1-1", [None, 0, 15, 1], {1, 2, 3, 4, 5, 6}, {None, 0}, {15}, {1}),
+            (
+                "many-1-many",
+                [None, 0, 15, 2, 3],
+                {1, 2, 3, 4, 5, 6},
+                {None, 0},
+                {15},
+                {2, 3},
+            ),
+            (
+                "many-many-0",
+                [None, 0, 16, 17],
+                {1, 2, 3, 4, 5, 6},
+                {None, 0},
+                {16, 17},
+                set(),
+            ),
+            (
+                "many-many-1",
+                [None, 0, 16, 17, 4],
+                {1, 2, 3, 4, 5, 6},
+                {None, 0},
+                {16, 17},
+                {4},
+            ),
+            (
+                "many-many-many",
+                [None, 0, 16, 17, 5, 6],
+                {1, 2, 3, 4, 5, 6},
+                {None, 0},
+                {16, 17},
+                {5, 6},
+            ),
+        ]
+    )
+    def test__classify_doc_ids(
+        self,
+        _,
+        doc_ids,
+        reference_doc_ids,
+        exp_invalid_doc_ids,
+        exp_nonexistent_doc_ids,
+        exp_existing_doc_ids,
+    ):
+        (
+            act_invalid_doc_ids,
+            act_nonexistent_doc_ids,
+            act_existing_doc_ids,
+        ) = db_operations._classify_doc_ids(doc_ids, reference_doc_ids)
+        self.assertEqual(act_invalid_doc_ids, exp_invalid_doc_ids)
+        self.assertEqual(act_nonexistent_doc_ids, exp_nonexistent_doc_ids)
+        self.assertEqual(act_existing_doc_ids, exp_existing_doc_ids)
 
     @parameterized.expand(
         [
@@ -378,16 +489,21 @@ class TestDbOperations(unittest.TestCase):
             ("empty name, invalid color", 2, "", "#fedcbZ", False),
             ("empty name, same color", 2, "", "#307895", False),
             ("empty name, new valid color", 2, "", "#307896", False),
-            ("new name, color is None", 2, "foo", None, False),
-            ("new name, empty color", 2, "foo", "", False),
-            ("new name, invalid color", 2, "foo", "#zedcba", False),
-            ("new name, same color", 2, "foo", "#307895", True),
-            ("new name, new valid color", 2, "foo", "#ABCDEF", True),
-            ("same name, color is None", 2, "Videos", None, False),
-            ("same name, empty color", 2, "Videos", "", False),
-            ("same name, invalid color", 2, "Videos", "#zedcba", False),
-            ("same name, same color", 2, "Videos", "#307895", True),
-            ("same name, new valid color", 2, "Videos", "#fedcba", True),
+            ("own existing name, color is None", 2, "Videos", None, False),
+            ("own existing name, empty color", 2, "Videos", "", False),
+            ("own existing name, invalid color", 2, "Videos", "#zedcba", False),
+            ("own existing name, same color", 2, "Videos", "#307895", True),
+            ("own existing name, new valid color", 2, "Videos", "#fedcba", True),
+            ("other existing name, color is None", 2, "Music", None, False),
+            ("other existing name, empty color", 2, "Music", "", False),
+            ("other existing name, invalid color", 2, "Music", "#zedcba", False),
+            ("other existing name, same color", 2, "Music", "#307895", False),
+            ("other existing name, new valid color", 2, "Music", "#fedcba", False),
+            ("other nonexistent name, color is None", 2, "foo", None, False),
+            ("other nonexistent name, empty color", 2, "foo", "", False),
+            ("other nonexistent name, invalid color", 2, "foo", "#zedcba", False),
+            ("other nonexistent name, same color", 2, "foo", "#307895", True),
+            ("other nonexistent name, new valid color", 2, "foo", "#ABCDEF", True),
             ("invalid id", 22, "Videos", "#fedcba", False),
         )
     )
@@ -615,8 +731,9 @@ class TestDbOperations(unittest.TestCase):
         (
             ("path is None", 1, None, False),
             ("empty path", 1, "", False),
-            ("same path", 1, "/home/dino/Music", True),
-            ("new valid path", 1, "/new/mapping/path", True),
+            ("own path", 1, "/home/dino/Music", True),
+            ("other existent path", 1, "/home/dino/Videos", False),
+            ("other nonexistent path", 1, "/foo", True),
             ("invalid id", 111, "/new/mapping/path", False),
         )
     )

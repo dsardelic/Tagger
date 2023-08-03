@@ -1,3 +1,4 @@
+import logging
 import os
 import re
 from pathlib import Path, PosixPath
@@ -9,6 +10,8 @@ from django.shortcuts import redirect, render
 
 from pathtagger import db_operations as db
 from Tagger import params, settings
+
+logger = logging.getLogger(__name__)
 
 
 class MyPath:
@@ -74,7 +77,7 @@ class MyPath:
 
     def get_children(self) -> List["MyPath"]:
         return [
-            MyPath(child_raw_path, True)
+            self.__class__(child_raw_path, True)
             for child_raw_path in sorted(
                 list(self.abs_path.glob("*")),
                 key=lambda x: (1 - x.is_dir(), str(x).upper()),
@@ -83,8 +86,11 @@ class MyPath:
 
 
 def get_extended_dataset(dataset):
+    if not dataset:
+        logger.debug("Falsy argument for parameter 'dataset': %r", dataset)
     for element in dataset:
         mypath = MyPath(element["path"], False)
+        logger.debug("MyPath: %r", mypath)
         element["abs_path_str"] = mypath.abs_path_str
         element["system_path_str"] = str(mypath.abs_path)
         element["db_path_str"] = mypath.db_path_str
@@ -99,22 +105,33 @@ def get_extended_dataset(dataset):
 
 
 def get_drive_root_dirs():
+    drive_root_dirs = []
     if os.name == "nt":
         from ctypes import windll  # pylint: disable=import-outside-toplevel
 
         bitfield = windll.kernel32.GetLogicalDrives()
         masks = [(1 << n, chr(ord("A") + n)) for n in range(ord("Z") - ord("A") + 1)]
-        return [
+        drive_root_dirs = [
             {"path_str": drive + ":/", "system_path_str": drive + ":\\"}
             for mask, drive in masks
             if bitfield & mask
         ]
-    return []
+    logger.debug("Returning %d drive_root_dirs...", len(drive_root_dirs))
+    return drive_root_dirs
 
 
 def mapping_details(request, mapping_id):
+    if not mapping_id:
+        logger.warning("Invalid argument for parameter 'mapping_id': %r", mapping_id)
+    else:
+        logger.debug("Mapping id: %r", mapping_id)
     if request.method == "POST":
-        mypath = MyPath(request.POST.get("path"), True)
+        if not (path_str := request.POST.get("path")):
+            logger.error("Invalid value for request parameter 'path': %r", path_str)
+        else:
+            logger.debug("Path: %r", path_str)
+        mypath = MyPath(path_str, True)
+        logger.debug("MyPath: %r", mypath)
         if mypath.is_valid_db_path_str:
             db.update_mapping_path(mapping_id, mypath.db_path_str)
         return redirect("pathtagger:mappings_list")
@@ -130,7 +147,12 @@ def mapping_details(request, mapping_id):
 
 
 def add_mapping(request):
-    mypath = MyPath(request.POST.get("path"), True)
+    if not (path_str := request.POST.get("path")):
+        logger.error("Invalid value for request parameter 'path': %r", path_str)
+    else:
+        logger.debug("Request parameter 'path': %r", path_str)
+    mypath = MyPath(path_str, True)
+    logger.debug("MyPath: %r", mypath)
     if mypath.is_valid_db_path_str and not db.get_mapping(
         db_path_str=mypath.db_path_str
     ):
@@ -147,17 +169,29 @@ def parse_tag_ids_to_append_and_remove(querydict):
             elif action == "remove":
                 tag_ids_to_remove.append(int(key.strip("tag_")))
             # ignore tags that are to be simultaneously appended and removed
-            # i.e. set(action) == {"append", "remove"}
+            if set(action) == {"append", "remove"}:
+                logger.warning(
+                    "Same tag cannot be added and removed at the same time. "
+                    "Ignoring (tag_id=%r).",
+                    key.strip("tag_"),
+                )
+    logger.debug(
+        "Returning %d tags to append and %d tags to remove...",
+        len(tag_ids_to_append),
+        len(tag_ids_to_remove),
+    )
     return tag_ids_to_append, tag_ids_to_remove
 
 
 def create_tags(new_tag_names):
+    logger.debug("New tag names: %r", new_tag_names)
     tag_ids = []
     if new_tag_names:
         for raw_name in new_tag_names.strip(",").split(","):
             name = raw_name.strip()
             if name and not db.get_tag(name=name):
                 tag_ids.append(db.insert_tag(name, params.DEFAULT_TAG_COLOR))
+    logger.debug("Returning %d tag ids...", len(tag_ids))
     return tag_ids
 
 
@@ -165,34 +199,50 @@ def edit_mappings(request):
     if request.POST.get("action_delete"):
         return delete_mappings(request)
     if request.POST.get("action_edit_tags"):
-        if mapping_ids := [
-            int(mapping_id) for mapping_id in request.POST.getlist("mapping_id")
-        ]:
+        if not (mapping_id_strs := request.POST.getlist("mapping_id")):
+            logger.error(
+                "Invalid values list for request parameter 'mapping_id': %r",
+                mapping_id_strs,
+            )
+        else:
+            logger.debug(
+                "Request parameter 'mapping_id' values list: %r", mapping_id_strs
+            )
+        new_tag_names = request.POST.get("new_tag_names")
+        logger.debug("New tag names: %r", new_tag_names)
+        if mapping_ids := [int(mapping_id) for mapping_id in mapping_id_strs]:
             tag_ids_to_append, tag_ids_to_remove = parse_tag_ids_to_append_and_remove(
                 request.POST
             )
-            tag_ids_to_append.extend(create_tags(request.POST.get("new_tag_names")))
+            tag_ids_to_append.extend(create_tags(new_tag_names))
             db.append_tags_to_mappings(tag_ids_to_append, mapping_ids)
             db.remove_tags_from_mappings(tag_ids_to_remove, mapping_ids)
-    return redirect("pathtagger:mappings_list")
-
-
-def delete_mappings(request):
-    db.delete_mappings(
-        [int(mapping_id) for mapping_id in request.POST.getlist("mapping_id")]
+        return redirect("pathtagger:mappings_list")
+    logger.error(
+        "Request should have exactly one of the following parameters: "
+        "'action_delete', 'action_edit_tags'"
     )
     return redirect("pathtagger:mappings_list")
 
 
+def delete_mappings(request):
+    mapping_id_strs = request.POST.getlist("mapping_id")
+    logger.debug("Mapping id values list: %r", mapping_id_strs)
+    db.delete_mappings([int(mapping_id) for mapping_id in mapping_id_strs])
+    return redirect("pathtagger:mappings_list")
+
+
 def mappings_list(request):
-    tag_ids_to_include = [
-        int(tag_id) for tag_id in request.GET.getlist("tag_id_include")
-    ]
-    tag_ids_to_exclude = [
-        int(tag_id) for tag_id in request.GET.getlist("tag_id_exclude")
-    ]
+    tag_id_include_strs = request.GET.getlist("tag_id_include")
+    logger.debug("Tag id include values: %r", tag_id_include_strs)
+    tag_id_exclude_strs = request.GET.getlist("tag_id_exclude")
+    logger.debug("Tag id exclude values: %r", tag_id_exclude_strs)
+    tag_ids_to_include = [int(tag_id) for tag_id in tag_id_include_strs]
+    tag_ids_to_exclude = [int(tag_id) for tag_id in tag_id_exclude_strs]
     path_name_like = request.GET.get("path_name_like", "")
+    logger.debug("Path name like: %r", path_name_like)
     path_type = request.GET.get("path_type", "all")
+    logger.debug("Path type: %r", path_type)
     mappings = get_extended_dataset(
         db.get_filtered_mappings(tag_ids_to_include, tag_ids_to_exclude, path_name_like)
     )
@@ -200,19 +250,18 @@ def mappings_list(request):
         mappings = [mapping for mapping in mappings if mapping["path_exists"]]
     elif path_type == "nonexistent":
         mappings = [mapping for mapping in mappings if not mapping["path_exists"]]
-    filters = {
-        "tag_ids_to_include": tag_ids_to_include,
-        "tag_ids_to_exclude": tag_ids_to_exclude,
-        "path_name_like": path_name_like,
-        "path_type": path_type,
-    }
     return render(
         request,
         "pathtagger/mappings_list.html",
         {
             "mappings": mappings,
             "no_mappings_at_all": not db.get_all_mappings(),
-            "filters": filters,
+            "filters": {
+                "tag_ids_to_include": tag_ids_to_include,
+                "tag_ids_to_exclude": tag_ids_to_exclude,
+                "path_name_like": path_name_like,
+                "path_type": path_type,
+            },
             "tags": db.get_all_tags(),
         },
     )
@@ -220,11 +269,15 @@ def mappings_list(request):
 
 def tag_details(request, tag_id):
     if request.method == "POST":
-        if (
-            (name := request.POST.get("name"))
-            and not db.get_tag(name=name)
-            and (color := request.POST.get("color", params.DEFAULT_TAG_COLOR))
-        ):
+        if not (name := request.POST.get("name")):
+            logger.error("Invalid value for request parameter 'name': %r", name)
+        else:
+            logger.debug("Name: %r", name)
+        if not (color := request.POST.get("color")):
+            logger.error("Invalid value for request parameter 'color': %r", color)
+        else:
+            logger.debug("Color: %r", color)
+        if name and color:
             db.update_tag(tag_id, name, color)
         return redirect("pathtagger:tags_list")
     return render(
@@ -238,17 +291,27 @@ def tag_details(request, tag_id):
 
 
 def add_tag(request):
-    if (
-        (name := request.POST.get("name"))
-        and not db.get_tag(name=name)
-        and (color := request.POST.get("color", params.DEFAULT_TAG_COLOR))
-    ):
+    if not (name := request.POST.get("name")):
+        logger.error("Invalid value for request parameter 'name': %r", name)
+    else:
+        logger.debug("Name: %r", name)
+    if not (color := request.POST.get("color")):
+        logger.error("Invalid value for request parameter 'color': %r", color)
+    else:
+        logger.debug("Color: %r", color)
+    if not color:
+        color = params.DEFAULT_TAG_COLOR
+    if name and color:
         db.insert_tag(name, color)
     return redirect("pathtagger:tags_list")
 
 
 def delete_tags(request):
-    db.delete_tags([int(tag_id) for tag_id in request.POST.getlist("tag_id")])
+    if not (tag_ids := request.POST.getlist("tag_id")):
+        logger.error("Invalid values list for request parameter 'tag_id': %r", tag_ids)
+    else:
+        logger.debug("Tag ids: %r", tag_ids)
+    db.delete_tags([int(tag_id) for tag_id in tag_ids])
     return redirect("pathtagger:tags_list")
 
 
@@ -260,14 +323,28 @@ def tags_list(request):
 
 
 def remove_tag_from_mappings(request, tag_id):
+    if not tag_id:
+        logger.warning("Invalid argument for parameter 'tag_id': %r", tag_id)
+    else:
+        logger.debug("Tag id: %r", tag_id)
+    if not (mapping_ids := request.POST.getlist("mapping_id")):
+        logger.error(
+            "Invalid values list for request parameter 'mapping_id': %r", mapping_ids
+        )
+    else:
+        logger.debug("Mapping id: %r", mapping_ids)
     db.remove_tags_from_mappings(
         [tag_id],
-        [int(mapping_id) for mapping_id in request.POST.getlist("mapping_id")],
+        [int(mapping_id) for mapping_id in mapping_ids],
     )
     return redirect("pathtagger:tag_details", tag_id=tag_id)
 
 
 def mypath_tokens(mypath: MyPath) -> List[Dict[str, str]]:
+    if not mypath:
+        logger.warning("Invalid argument for parameter 'mypath': %r", mypath)
+    else:
+        logger.debug("Mypath: %r", mypath)
     if not mypath.abs_path:
         return []
     mypath_parents = list(reversed(mypath.abs_path.parents))
@@ -280,6 +357,10 @@ def mypath_tokens(mypath: MyPath) -> List[Dict[str, str]]:
 
 
 def mypath_children_data(mypath: MyPath) -> List[Dict[str, str]]:
+    if not mypath:
+        logger.warning("Invalid argument for parameter 'mypath': %r", mypath)
+    else:
+        logger.debug("Mypath: %r", mypath)
     if not mypath.abs_path or not mypath.abs_path.is_dir():
         return []
     return [
@@ -303,7 +384,14 @@ def mypath_children_data(mypath: MyPath) -> List[Dict[str, str]]:
 
 
 def path_details(request, abs_path_str):
+    if not abs_path_str:
+        logger.warning(
+            "Invalid argument for parameter 'abs_path_str': %r", abs_path_str
+        )
+    else:
+        logger.debug("Absolute path string: %r", abs_path_str)
     mypath = MyPath(abs_path_str, True)
+    logger.debug("MyPath: %r", mypath)
     if mypath.abs_path_str:
         return render(
             request,
@@ -335,9 +423,13 @@ def path_details(request, abs_path_str):
 
 def edit_path_tags(request):
     if raw_path_strs := request.POST.getlist("path"):
+        logger.debug("Raw path strings: %r", raw_path_strs)
+        new_tag_names = request.POST.get("new_tag_names")
+        logger.debug("New tag names: %r", new_tag_names)
         mapping_ids = []
         for raw_path_str in raw_path_strs:
             mypath = MyPath(raw_path_str, True)
+            logger.debug("MyPath: %r", mypath)
             if mapping := db.get_mapping(db_path_str=mypath.db_path_str):
                 mapping_ids.append(mapping.doc_id)
             else:
@@ -345,16 +437,24 @@ def edit_path_tags(request):
         tag_ids_to_append, tag_ids_to_remove = parse_tag_ids_to_append_and_remove(
             request.POST
         )
-        tag_ids_to_append.extend(create_tags(request.POST.get("new_tag_names")))
+        tag_ids_to_append.extend(create_tags(new_tag_names))
+        logger.debug("Mapping ids to update: %r", mapping_ids)
+        logger.debug("Tag ids to append: %r", tag_ids_to_append)
+        logger.debug("Tag ids to remove: %r", tag_ids_to_remove)
         db.append_tags_to_mappings(tag_ids_to_append, mapping_ids)
         db.remove_tags_from_mappings(tag_ids_to_remove, mapping_ids)
+    else:
+        logger.error("Invalid value for request parameters 'path': %r", raw_path_strs)
     return redirect(
-        "pathtagger:path_details", path_str=request.POST.get("current_path")
+        "pathtagger:path_details", abs_path_str=request.POST.get("current_path")
     )
 
 
 def toggle_favorite_path(request):
-    mypath = MyPath(request.POST.get("path"), True)
+    abs_path_str = request.POST.get("path")
+    logger.debug("Absolute path string: %r", abs_path_str)
+    mypath = MyPath(abs_path_str, True)
+    logger.debug("MyPath: %r", mypath)
     if mypath.is_valid_db_path_str:
         if db.get_favorite(mypath.db_path_str):
             db.delete_favorite(mypath.db_path_str)
@@ -363,8 +463,10 @@ def toggle_favorite_path(request):
             db.insert_favorite(mypath.db_path_str)
             is_favorite = True
         if request.is_ajax():
+            logger.debug("Sending Json response OK, is_favorite=%r", bool(is_favorite))
             return JsonResponse({"status": "ok", "is_favorite": str(bool(is_favorite))})
     elif request.is_ajax():
+        logger.debug("Sending Json response NOK")
         return JsonResponse({"status": "nok"})
     return redirect("pathtagger:homepage")
 
@@ -374,6 +476,7 @@ def root_path_redirect(_):
         params.BASE_PATH if params.BASE_PATH else Path(Path(settings.BASE_DIR).anchor),
         True,
     )
+    logger.debug("Root path: %r", root_path)
     return redirect("pathtagger:path_details", abs_path_str=root_path.abs_path_str)
 
 

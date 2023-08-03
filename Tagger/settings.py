@@ -121,3 +121,37 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/2.0/howto/static-files/
 
 STATIC_URL = "/static/"
+
+# Create a LOGGING dictionary
+LOGGING = {
+    # Use v1 of the logging config schema
+    "version": 1,
+    # Continue to use existing loggers
+    "disable_existing_loggers": False,
+    "formatters": {
+        "verbose": {
+            "format": "{asctime} {levelname:<8}  {filename:>20}:{lineno:<4} {message}",
+            "style": "{",
+        },
+    },
+    # Create a log handler that prints logs to the terminal
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": "verbose",
+        },
+    },
+    # Define the root logger's settings
+    "root": {
+        "handlers": ["console"],
+        "level": "INFO",
+    },
+    # Define the django log module's settings
+    "loggers": {
+        "django": {
+            "handlers": ["console"],
+            "level": os.getenv("DJANGO_LOG_LEVEL", "WARNING"),
+            "propagate": False,
+        },
+    },
+}
