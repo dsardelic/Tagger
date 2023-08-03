@@ -1,5 +1,6 @@
 import re
-from typing import List, Optional, Union
+from collections import namedtuple
+from typing import List, NamedTuple, Optional, Set, Union
 
 from tinydb import Query, TinyDB, where
 
@@ -18,6 +19,21 @@ def load_db(path):
 
 
 DB = load_db(params.DB_PATH)
+
+
+def _classify_doc_ids(doc_ids: List[int], reference_doc_ids: Set[int]) -> NamedTuple:
+    DocIdClassification = namedtuple(
+        "DocIdClassification", "invalid_doc_ids nonexistent_doc_ids existing_doc_ids"
+    )
+    if not (doc_ids and reference_doc_ids):
+        return DocIdClassification(set(), set(), set())
+    invalid_doc_ids = {doc_id for doc_id in doc_ids if not doc_id}
+    valid_doc_ids = set(doc_ids) - invalid_doc_ids
+    return DocIdClassification(
+        invalid_doc_ids,
+        valid_doc_ids - reference_doc_ids,
+        valid_doc_ids.intersection(reference_doc_ids),
+    )
 
 
 def get_all_favorites():

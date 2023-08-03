@@ -26,6 +26,114 @@ class TestDbOperations(unittest.TestCase):
     def tearDown(self):
         os.remove(self.db_tmp_file_name)
 
+    @parameterized.expand(
+        [
+            ("doc_ids is None", None, [1, 2], set(), set(), set()),
+            ("reference is None", [1, 2], None, set(), set(), set()),
+            ("truthy doc_ids, empty reference", [1, 2], {}, set(), set(), set()),
+            (
+                "empty doc_ids, truthy reference",
+                [],
+                {1, 2, 3, 4, 5, 6},
+                set(),
+                set(),
+                set(),
+            ),
+            ("0-0-1", [4], {1, 2, 3, 4, 5, 6}, set(), set(), {4}),
+            ("0-0-many", [4, 5], {1, 2, 3, 4, 5, 6}, set(), set(), {4, 5}),
+            ("0-1-0", [11], {1, 2, 3, 4, 5, 6}, set(), {11}, set()),
+            ("0-1-1", [1, 11], {1, 2, 3, 4, 5, 6}, set(), {11}, {1}),
+            ("0-1-many", [1, 2, 11], {1, 2, 3, 4, 5, 6}, set(), {11}, {1, 2}),
+            ("0-many-0", [11, 12], {1, 2, 3, 4, 5, 6}, set(), {11, 12}, set()),
+            ("0-many-1", [3, 11, 12], {1, 2, 3, 4, 5, 6}, set(), {11, 12}, {3}),
+            (
+                "0-many-many",
+                [4, 5, 11, 12],
+                {1, 2, 3, 4, 5, 6},
+                set(),
+                {11, 12},
+                {4, 5},
+            ),
+            ("1-0-0", [None], {1, 2, 3, 4, 5, 6}, {None}, set(), set()),
+            ("1-0-1", [None, 1], {1, 2, 3, 4, 5, 6}, {None}, set(), {1}),
+            ("1-0-many", [None, 1, 2], {1, 2, 3, 4, 5, 6}, {None}, set(), {1, 2}),
+            ("1-1-0", [None, 11], {1, 2, 3, 4, 5, 6}, {None}, {11}, set()),
+            ("1-1-1", [None, 11, 2], {1, 2, 3, 4, 5, 6}, {None}, {11}, {2}),
+            ("1-1-many", [None, 11, 1, 2], {1, 2, 3, 4, 5, 6}, {None}, {11}, {1, 2}),
+            ("1-many-0", [None, 11, 12], {1, 2, 3, 4, 5, 6}, {None}, {11, 12}, set()),
+            ("1-many-1", [None, 11, 12, 3], {1, 2, 3, 4, 5, 6}, {None}, {11, 12}, {3}),
+            (
+                "1-many-many",
+                [None, 11, 12, 4, 5],
+                {1, 2, 3, 4, 5, 6},
+                {None},
+                {11, 12},
+                {4, 5},
+            ),
+            ("many-0-0", [None, 0], {1, 2, 3, 4, 5, 6}, {None, 0}, set(), set()),
+            ("many-0-1", [None, 0, 4], {1, 2, 3, 4, 5, 6}, {None, 0}, set(), {4}),
+            (
+                "many-0-many",
+                [None, 0, 5, 6],
+                {1, 2, 3, 4, 5, 6},
+                {None, 0},
+                set(),
+                {5, 6},
+            ),
+            ("many-1-0", [None, 0, 15], {1, 2, 3, 4, 5, 6}, {None, 0}, {15}, set()),
+            ("many-1-1", [None, 0, 15, 1], {1, 2, 3, 4, 5, 6}, {None, 0}, {15}, {1}),
+            (
+                "many-1-many",
+                [None, 0, 15, 2, 3],
+                {1, 2, 3, 4, 5, 6},
+                {None, 0},
+                {15},
+                {2, 3},
+            ),
+            (
+                "many-many-0",
+                [None, 0, 16, 17],
+                {1, 2, 3, 4, 5, 6},
+                {None, 0},
+                {16, 17},
+                set(),
+            ),
+            (
+                "many-many-1",
+                [None, 0, 16, 17, 4],
+                {1, 2, 3, 4, 5, 6},
+                {None, 0},
+                {16, 17},
+                {4},
+            ),
+            (
+                "many-many-many",
+                [None, 0, 16, 17, 5, 6],
+                {1, 2, 3, 4, 5, 6},
+                {None, 0},
+                {16, 17},
+                {5, 6},
+            ),
+        ]
+    )
+    def test__classify_doc_ids(
+        self,
+        _,
+        doc_ids,
+        reference_doc_ids,
+        exp_invalid_doc_ids,
+        exp_nonexistent_doc_ids,
+        exp_existing_doc_ids,
+    ):
+        (
+            act_invalid_doc_ids,
+            act_nonexistent_doc_ids,
+            act_existing_doc_ids,
+        ) = db_operations._classify_doc_ids(doc_ids, reference_doc_ids)
+        self.assertEqual(act_invalid_doc_ids, exp_invalid_doc_ids)
+        self.assertEqual(act_nonexistent_doc_ids, exp_nonexistent_doc_ids)
+        self.assertEqual(act_existing_doc_ids, exp_existing_doc_ids)
+
     def test_get_all_favorites(self):
         favorites = db_operations.get_all_favorites()
         self.assertEqual(len(favorites), 2)
