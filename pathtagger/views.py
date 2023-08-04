@@ -77,50 +77,67 @@ def mapping_details(request, mapping_id):
 
 def add_mapping(request):
     if not (path_str := request.POST.get("path")):
-        logger.error("Invalid value for request parameter 'path': %r", path_str)
+        logger.warning("Invalid value for request parameter 'path': %r", path_str)
     else:
         logger.debug("Request parameter 'path': %r", path_str)
     mypath = MyPath(path_str, True)
     logger.debug("MyPath: %r", mypath)
-    if mypath.is_valid_db_path_str and not db.get_mapping(
-        db_path_str=mypath.db_path_str
-    ):
-        db.insert_mapping(mypath.db_path_str, [])
+    db.insert_mapping(mypath.db_path_str, [])
     return redirect("pathtagger:mappings_list")
 
 
 def _parse_tag_ids_to_append_and_remove(querydict, new_tag_names):
-    tag_ids_to_append = create_tags_from_names(new_tag_names)
+    logger.debug("New tag names: %r", new_tag_names)
+    tag_ids_to_append = _get_tag_ids_for_tag_names(new_tag_names)
     tag_ids_to_remove = set()
-    for key, action in querydict.items():
-        if key.startswith("tag_"):
-            if action == "append":
-                tag_ids_to_append.add(int(key.strip("tag_")))
-            elif action == "remove":
-                tag_ids_to_remove.add(int(key.strip("tag_")))
-            # ignore tags that are to be simultaneously appended and removed
-            if set(action) == {"append", "remove"}:
-                logger.warning(
-                    "Same tag cannot be added and removed at the same time. "
-                    "Ignoring (tag_id=%r).",
-                    key.strip("tag_"),
-                )
-    logger.debug(
-        "Returning %d tags to append and %d tags to remove...",
-        len(tag_ids_to_append),
-        len(tag_ids_to_remove),
-    )
+    if not querydict:
+        logger.error("Invalid value for querydict: %r", querydict)
+    else:
+        logger.debug("Querydict: %r", querydict)
+        for key, action in querydict.items():
+            if key.startswith("tag_"):
+                if action == "append":
+                    tag_ids_to_append.add(int(key.strip("tag_")))
+                elif action == "remove":
+                    tag_ids_to_remove.add(int(key.strip("tag_")))
+                # ignore tags that are to be simultaneously appended and removed
+                if set(action) == {"append", "remove"}:
+                    logger.warning(
+                        "Same tag cannot be added and removed at the same time. "
+                        "Ignoring (tag_id=%r).",
+                        key.strip("tag_"),
+                    )
+        logger.debug(
+            "Returning %d tags to append and %d tags to remove...",
+            len(tag_ids_to_append),
+            len(tag_ids_to_remove),
+        )
     return tag_ids_to_append, tag_ids_to_remove
 
 
-def create_tags_from_names(new_tag_names: List[str]) -> Set[int]:
-    logger.debug("New tag names: %r", new_tag_names)
-    tag_ids = set()
-    if new_tag_names:
-        for raw_name in new_tag_names.strip(",").split(","):
-            name = raw_name.strip()
-            if name and not db.get_tag(name=name):
-                tag_ids.add(db.insert_tag(name, params.DEFAULT_TAG_COLOR))
+def _parse_tag_names_from_string(new_tag_names_str: str) -> Set[str]:
+    logger.debug("New tag names: %r", new_tag_names_str)
+    tag_names = (
+        {
+            stripped_token
+            for token in new_tag_names_str.strip(",").split(",")
+            if (stripped_token := token.strip())
+        }
+        if new_tag_names_str
+        else set()
+    )
+    logger.debug("Returning tag_names %r...")
+    return tag_names
+
+
+def _get_tag_ids_for_tag_names(tag_names_str: str) -> Set[int]:
+    logger.debug("New tag names: %r", tag_names_str)
+    tag_ids = {
+        tag.doc_id
+        if (tag := db.get_tag(name=tag_name))
+        else db.insert_tag(tag_name, params.DEFAULT_TAG_COLOR)
+        for tag_name in _parse_tag_names_from_string(tag_names_str)
+    }
     logger.debug("Returning %d tag ids...", len(tag_ids))
     return tag_ids
 
@@ -149,7 +166,7 @@ def edit_mappings(request):
                 },
                 new_tag_names,
             )
-            tag_ids_to_append.update(create_tags_from_names(new_tag_names))
+            tag_ids_to_append.update(_get_tag_ids_for_tag_names(new_tag_names))
             db.append_tags_to_mappings(tag_ids_to_append, mapping_ids)
             db.remove_tags_from_mappings(tag_ids_to_remove, mapping_ids)
         return redirect("pathtagger:mappings_list")

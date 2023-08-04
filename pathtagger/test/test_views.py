@@ -142,11 +142,11 @@ class Test(SimpleTestCase):
 
     @parameterized.expand(
         [
-            ("path missing", None, False),
-            ("path empty", "", False),
-            ("dot path", ".", False),
-            ("mapping does not exist yet", "/home/dino/Pictures", True),
-            ("mapping already exists", "/home/dino/Downloads", False),
+            ("path missing", None),
+            ("path empty", ""),
+            ("dot path", "."),
+            ("mapping does not exist yet", "/home/dino/Pictures"),
+            ("mapping already exists", "/home/dino/Downloads"),
         ]
     )
     @unittest.mock.patch.object(views.db, "insert_mapping")
@@ -154,7 +154,6 @@ class Test(SimpleTestCase):
         self,
         _,
         db_path_str,
-        exp_insert_mapping_called,
         mock_insert_mapping,
     ):
         data = {"path": db_path_str} if db_path_str else {}
@@ -162,42 +161,120 @@ class Test(SimpleTestCase):
             reverse(f"{urls.app_name}:add_mapping"), {**data}, follow=True
         )
         self.assertRedirects(response, reverse(f"{urls.app_name}:mappings_list"))
-        if exp_insert_mapping_called:
-            mock_insert_mapping.assert_called_once_with(db_path_str, [])
-        else:
-            mock_insert_mapping.assert_not_called()
-
-    def test__parse_tag_ids_to_append_and_remove(self):
-        data = {
-            "tag_3": "remove",
-            "tag_4": "invalid action",
-            "tag_2": "append",
-            "foo": "bar",
-            "tag_1": "append",
-        }
-        (
-            tag_ids_to_append,
-            tag_ids_to_remove,
-        ) = views._parse_tag_ids_to_append_and_remove(data, None)
-        self.assertEqual(tag_ids_to_append, {1, 2})
-        self.assertEqual(tag_ids_to_remove, {3})
+        mock_insert_mapping.assert_called_once()
 
     @parameterized.expand(
         [
-            ("None", None, 0),
-            ("empty", "", 0),
-            ("single comma", ",", 0),
-            ("regular one", "new tag 1", 1),
-            ("regular one, messy", "   new tag 1 ", 1),
-            ("regular one, messy, trailing comma", "   new tag 1  , ", 1),
-            ("regular two, messy", "new tag 1,new tag 2", 2),
-            ("regular two, messy", "  new tag 1,new tag 2    ", 2),
-            ("regular two, messy, leading comma", "  ,   new tag 1, new tag 2    ", 2),
+            ("querydict is None", None, set(), set()),
+            ("querydict empty", {}, set(), set()),
+            ("single invalid key", {"foo": "append"}, set(), set()),
+            ("single invalid action", {"tag_2": "foo"}, set(), set()),
+            ("single append", {"tag_2": "append"}, {2}, set()),
+            ("single remove", {"tag_2": "remove"}, set(), {2}),
+            (
+                "tutti frutti",
+                {
+                    "tag_3": "remove",
+                    "tag_4": "invalid action",
+                    "tag_2": "append",
+                    "foo": "append",
+                    "tag_6": "bar",
+                    "tag_1": "append",
+                    "tag_7": {"append", "remove"},
+                },
+                {1, 2},
+                {3},
+            ),
         ]
     )
-    def test_create_tags_from_names(self, _, new_tag_names, exp_new_tags_count):
+    @unittest.mock.patch.object(views, "_get_tag_ids_for_tag_names")
+    def test__parse_tag_ids_to_append_and_remove(
+        self,
+        _,
+        querydict,
+        exp_tag_ids_to_append,
+        exp_tag_ids_to_remove,
+        mock__get_tag_ids_for_tag_names,
+    ):
+        mock__get_tag_ids_for_tag_names_return_value = object()
+        mock__get_tag_ids_for_tag_names.return_value = {
+            mock__get_tag_ids_for_tag_names_return_value
+        }
+        new_tag_names = object()
+        (
+            act_tag_ids_to_append,
+            act_tag_ids_to_remove,
+        ) = views._parse_tag_ids_to_append_and_remove(querydict, new_tag_names)
+        self.assertTrue(act_tag_ids_to_append.issuperset(exp_tag_ids_to_append))
+        self.assertIn(
+            mock__get_tag_ids_for_tag_names_return_value, act_tag_ids_to_append
+        )
+        self.assertEqual(act_tag_ids_to_remove, exp_tag_ids_to_remove)
+
+    @parameterized.expand(
+        [
+            ("None", None, set()),
+            ("empty", "", set()),
+            ("single comma", ",", set()),
+            ("regular one", "foo", {"foo"}),
+            ("regular one, messy", "   foo ", {"foo"}),
+            ("regular one, messy, trailing comma", "   foo  , ", {"foo"}),
+            ("regular two, messy", "foo,bar", {"foo", "bar"}),
+            ("regular two, messy", "  foo,bar    ", {"foo", "bar"}),
+            ("regular two, messy, leading comma", "  ,   foo, bar    ", {"foo", "bar"}),
+        ]
+    )
+    def test__parse_tag_names_from_string(self, _, new_tag_names_str, exp_tag_names):
         self.assertEqual(
-            len(views.create_tags_from_names(new_tag_names)), exp_new_tags_count
+            views._parse_tag_names_from_string(new_tag_names_str), exp_tag_names
+        )
+
+    @parameterized.expand(
+        [
+            ("tag_names_str is None", None, set(), set()),
+            ("empty tag_names_str", "", set(), set()),
+            ("single comma", ",", set(), set()),
+            ("single existing", "Documents", {"Documents"}, set()),
+            ("single nonexistent", "Foo", set(), {"Foo"}),
+            ("multiple existing", "Music,Documents", {"Music", "Documents"}, set()),
+            ("multiple nonexistent", "Bar, Foo", set(), {"Foo", "Bar"}),
+            (
+                "mixed",
+                "Foo,Music,Bar,Fubar,Documents",
+                {"Music", "Documents"},
+                {"Foo", "Bar", "Fubar"},
+            ),
+        ]
+    )
+    @unittest.mock.patch.object(views.db, "insert_tag")
+    def test__get_tag_ids_for_tag_names(
+        self,
+        _,
+        new_tag_names_str,
+        exp_existing_tag_names,
+        exp_new_tag_names,
+        mock_insert_tag,
+    ):
+        mock_insert_tag_rvals = [object() for _ in range(len(exp_new_tag_names))]
+        mock_insert_tag.side_effect = mock_insert_tag_rvals
+        act_tag_ids = views._get_tag_ids_for_tag_names(new_tag_names_str)
+        self.assertTrue(
+            act_tag_ids.issuperset(
+                {
+                    db_operations.get_tag(name=name).doc_id
+                    for name in exp_existing_tag_names
+                }
+            )
+        )
+        if exp_new_tag_names:
+            mock_insert_tag.assert_has_calls(
+                [call(name, params.DEFAULT_TAG_COLOR) for name in exp_new_tag_names],
+                any_order=True,
+            )
+        else:
+            mock_insert_tag.assert_not_called()
+        self.assertTrue(
+            all(new_tag_id in act_tag_ids for new_tag_id in mock_insert_tag_rvals)
         )
 
     def test_edit_mappings_action_delete(self):
