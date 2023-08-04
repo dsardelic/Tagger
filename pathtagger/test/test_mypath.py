@@ -2,7 +2,7 @@ import logging
 import unittest
 from pathlib import Path
 
-from pathtagger.views import MyPath
+from pathtagger.mypath import MyPath
 from Tagger import params
 
 
