@@ -18,19 +18,25 @@ from pathtagger import db_operations, urls, views
 from pathtagger.views import MyPath
 from Tagger import params, settings
 
+# pylint: disable=too-many-public-methods
+# pylint: disable=too-many-arguments
+# pylint: disable=too-many-locals
+# pylint: disable=too-many-statements
+# pylint: disable=protected-access
+# pylint: disable=expression-not-assigned
+# pylint: disable=too-many-lines
+
 
 def _table_row_count(soup, element_id):
-    elements = soup.select(f"#{element_id}")
-    if not elements:
+    if not (elements := soup.select(f"#{element_id}")):
         # element does not exist
         # if it should exist, it may 'contain' 0 rows
         return -1
     if len(elements) > 1:
-        raise Exception("Two or more elements have the same id")
+        raise KeyError("Two or more elements have the same id")
     return len(soup.select_one(f"#{element_id}").find_all("tr"))
 
 
-# pylint: disable=R0913,R0904
 class Test(SimpleTestCase):
     def setUp(self):
         logging.disable(logging.CRITICAL)
@@ -59,13 +65,13 @@ class Test(SimpleTestCase):
             all(
                 key in doc
                 for doc in docs
-                for key in [
+                for key in (
                     "abs_path_str",
                     "system_path_str",
                     "db_path_str",
                     "path_exists",
                     "path_is_dir",
-                ]
+                )
             )
         )
         self.assertEqual(
@@ -161,7 +167,7 @@ class Test(SimpleTestCase):
         else:
             mock_insert_mapping.assert_not_called()
 
-    def test_parse_tag_ids_to_append_and_remove(self):
+    def test__parse_tag_ids_to_append_and_remove(self):
         data = {
             "tag_3": "remove",
             "tag_4": "invalid action",
@@ -169,11 +175,12 @@ class Test(SimpleTestCase):
             "foo": "bar",
             "tag_1": "append",
         }
-        tag_ids_to_append, tag_ids_to_remove = views.parse_tag_ids_to_append_and_remove(
-            data
-        )
-        self.assertEqual(sorted(tag_ids_to_append), [1, 2])
-        self.assertEqual(sorted(tag_ids_to_remove), [3])
+        (
+            tag_ids_to_append,
+            tag_ids_to_remove,
+        ) = views._parse_tag_ids_to_append_and_remove(data, None)
+        self.assertEqual(tag_ids_to_append, {1, 2})
+        self.assertEqual(tag_ids_to_remove, {3})
 
     @parameterized.expand(
         [
@@ -188,8 +195,10 @@ class Test(SimpleTestCase):
             ("regular two, messy, leading comma", "  ,   new tag 1, new tag 2    ", 2),
         ]
     )
-    def test_create_tags(self, _, new_tag_names, exp_new_tags_count):
-        self.assertEqual(len(views.create_tags(new_tag_names)), exp_new_tags_count)
+    def test_create_tags_from_names(self, _, new_tag_names, exp_new_tags_count):
+        self.assertEqual(
+            len(views.create_tags_from_names(new_tag_names)), exp_new_tags_count
+        )
 
     def test_edit_mappings_action_delete(self):
         with unittest.mock.patch.object(
@@ -238,7 +247,7 @@ class Test(SimpleTestCase):
             "tag_2": "remove",
         }
         data.update(tags_to_append_and_remove)
-        for param in ["mapping_id", "new_tag_names"]:
+        for param in ("mapping_id", "new_tag_names"):
             if data[param] is None:
                 del data[param]
         response = self.client.post(
@@ -818,8 +827,7 @@ class Test(SimpleTestCase):
             ]
         else:
             mock_get_children.return_value = []
-        act_data = views.mypath_children_data(mypath)
-        if not act_data:
+        if not (act_data := views.mypath_children_data(mypath)):
             self.assertEqual(act_data, partial_exp_data)
         else:
             for act_item, exp_item in zip(act_data, partial_exp_data):
@@ -1128,8 +1136,104 @@ class Test(SimpleTestCase):
         else:
             self.assertIsNone(soup.select_one("#path_tokens"))
 
-    def test_edit_path_tags(self):
-        ...
+    @parameterized.expand(
+        [
+            ("None", None, 0),
+            ("empty", set(), 0),
+            ("sole invalid", {""}, 0),
+            ("sole nonexistent", {"/foo"}, 1),
+            ("sole existing", {"/media"}, 1),
+            ("invalid plus nonexistent", {"", "/foo"}, 1),
+            ("invalid plus existing", {"", "/media"}, 1),
+            ("nonexisting plus existing", {"/foo", "/media"}, 2),
+            (
+                "mixed",
+                {"/foo", "/media", "", "/bar", "/fubar", "/home/dino/Downloads"},
+                5,
+            ),
+        ]
+    )
+    def test__prepare_mapping_ids_for_tag_update(
+        self,
+        _,
+        raw_path_strs,
+        exp_mapping_ids_count,
+    ):
+        self.assertEqual(
+            len(views._prepare_mapping_ids_for_tag_update(raw_path_strs)),
+            exp_mapping_ids_count,
+        )
+
+    @parameterized.expand(
+        [
+            ("no paths, no new tag names, no current path", 0, None, None),
+            ("no paths, no new tag names, with current path", 0, None, object()),
+            ("no paths, with new tag names, no current path", 0, object(), None),
+            ("no paths, with new tag names, with current path", 0, object(), object()),
+            ("1 path, no new tag names, no current path", 1, None, None),
+            ("1 path, no new tag names, with current path", 1, None, object()),
+            ("1 path, with new tag names, no current path", 1, object(), None),
+            ("1 path, with new tag names, with current path", 1, object(), object()),
+            ("3 paths, no new tag names, no current path", 1, None, None),
+            ("3 paths, no new tag names, with current path", 1, None, object()),
+            ("3 paths, with new tag names, no current path", 1, object(), None),
+            ("3 paths, with new tag names, with current path", 1, object(), object()),
+        ]
+    )
+    @unittest.mock.patch.object(views.db, "remove_tags_from_mappings")
+    @unittest.mock.patch.object(views.db, "append_tags_to_mappings")
+    @unittest.mock.patch.object(views, "_parse_tag_ids_to_append_and_remove")
+    @unittest.mock.patch.object(views, "_prepare_mapping_ids_for_tag_update")
+    def test_edit_path_tags(
+        self,
+        _,
+        raw_path_str_parameter_count,
+        new_tag_names_parameter,
+        current_path_parameter,
+        mock__prepare_mapping_ids_for_tag_update,
+        mock__parse_tag_ids_to_append_and_remove,
+        mock_append_tags_to_mappings,
+        mock_remove_tags_from_mappings,
+    ):
+        raw_path_strs = {object() for _ in range(raw_path_str_parameter_count)}
+        mock__parse_tag_ids_to_append_and_remove_rval1 = object()
+        mock__parse_tag_ids_to_append_and_remove_rval2 = object()
+        mock__parse_tag_ids_to_append_and_remove.return_value = (
+            mock__parse_tag_ids_to_append_and_remove_rval1,
+            mock__parse_tag_ids_to_append_and_remove_rval2,
+        )
+        data = (
+            {"path": raw_path_str for raw_path_str in raw_path_strs}
+            if raw_path_str_parameter_count
+            else {}
+        )
+        if new_tag_names_parameter:
+            data["new_tag_names"] = new_tag_names_parameter
+        if current_path_parameter:
+            data["current_path"] = current_path_parameter
+        response = self.client.post(
+            reverse(f"{urls.app_name}:edit_path_tags"), {**data}, follow=True
+        )
+        self.assertRedirects(
+            response,
+            reverse(
+                f"{urls.app_name}:path_details",
+                kwargs={"abs_path_str": current_path_parameter},
+            ),
+            fetch_redirect_response=False,
+        )
+        if raw_path_str_parameter_count:
+            mock_append_tags_to_mappings.assert_called_once_with(
+                mock__parse_tag_ids_to_append_and_remove_rval1,
+                mock__prepare_mapping_ids_for_tag_update(raw_path_strs),
+            )
+            mock_remove_tags_from_mappings.assert_called_once_with(
+                mock__parse_tag_ids_to_append_and_remove_rval2,
+                mock__prepare_mapping_ids_for_tag_update(raw_path_strs),
+            )
+        else:
+            mock_append_tags_to_mappings.assert_not_called()
+            mock_remove_tags_from_mappings.assert_not_called()
 
     @parameterized.expand(
         [

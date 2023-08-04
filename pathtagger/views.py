@@ -1,7 +1,7 @@
 import logging
 import os
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, Set
 from urllib.parse import quote
 
 from django.http import JsonResponse
@@ -89,14 +89,15 @@ def add_mapping(request):
     return redirect("pathtagger:mappings_list")
 
 
-def parse_tag_ids_to_append_and_remove(querydict):
-    tag_ids_to_append, tag_ids_to_remove = [], []
+def _parse_tag_ids_to_append_and_remove(querydict, new_tag_names):
+    tag_ids_to_append = create_tags_from_names(new_tag_names)
+    tag_ids_to_remove = set()
     for key, action in querydict.items():
         if key.startswith("tag_"):
             if action == "append":
-                tag_ids_to_append.append(int(key.strip("tag_")))
+                tag_ids_to_append.add(int(key.strip("tag_")))
             elif action == "remove":
-                tag_ids_to_remove.append(int(key.strip("tag_")))
+                tag_ids_to_remove.add(int(key.strip("tag_")))
             # ignore tags that are to be simultaneously appended and removed
             if set(action) == {"append", "remove"}:
                 logger.warning(
@@ -112,14 +113,14 @@ def parse_tag_ids_to_append_and_remove(querydict):
     return tag_ids_to_append, tag_ids_to_remove
 
 
-def create_tags(new_tag_names):
+def create_tags_from_names(new_tag_names: List[str]) -> Set[int]:
     logger.debug("New tag names: %r", new_tag_names)
-    tag_ids = []
+    tag_ids = set()
     if new_tag_names:
         for raw_name in new_tag_names.strip(",").split(","):
             name = raw_name.strip()
             if name and not db.get_tag(name=name):
-                tag_ids.append(db.insert_tag(name, params.DEFAULT_TAG_COLOR))
+                tag_ids.add(db.insert_tag(name, params.DEFAULT_TAG_COLOR))
     logger.debug("Returning %d tag ids...", len(tag_ids))
     return tag_ids
 
@@ -140,10 +141,15 @@ def edit_mappings(request):
         new_tag_names = request.POST.get("new_tag_names")
         logger.debug("New tag names: %r", new_tag_names)
         if mapping_ids := [int(mapping_id) for mapping_id in mapping_id_strs]:
-            tag_ids_to_append, tag_ids_to_remove = parse_tag_ids_to_append_and_remove(
-                request.POST
+            tag_ids_to_append, tag_ids_to_remove = _parse_tag_ids_to_append_and_remove(
+                {
+                    key: value
+                    for key, value in request.POST.items()
+                    if key.startswith("tag_")
+                },
+                new_tag_names,
             )
-            tag_ids_to_append.extend(create_tags(new_tag_names))
+            tag_ids_to_append.update(create_tags_from_names(new_tag_names))
             db.append_tags_to_mappings(tag_ids_to_append, mapping_ids)
             db.remove_tags_from_mappings(tag_ids_to_remove, mapping_ids)
         return redirect("pathtagger:mappings_list")
@@ -350,23 +356,40 @@ def path_details(request, abs_path_str):
     )
 
 
+def _prepare_mapping_ids_for_tag_update(raw_path_strs: Set[str]) -> Set[int]:
+    logger.debug("Raw path strings: %r", raw_path_strs)
+    mapping_ids = set()
+    if raw_path_strs:
+        for raw_path_str in raw_path_strs:
+            if not (mypath := MyPath(raw_path_str, True)):
+                logger.warning("Invalid mypath: %r", mypath)
+            else:
+                logger.debug("MyPath: %r", mypath)
+            if mapping := db.get_mapping(db_path_str=mypath.db_path_str):
+                logger.debug("Mapping (path=%r) already exists", mapping)
+                mapping_ids.add(mapping.doc_id)
+            else:
+                logger.debug("Mapping (path=%r) does not exist yet", mapping)
+                if mapping_id := db.insert_mapping(mypath.db_path_str, []):
+                    mapping_ids.add(mapping_id)
+        logger.debug("Returning %d mapping ids...", len(mapping_ids))
+    return mapping_ids
+
+
 def edit_path_tags(request):
-    if raw_path_strs := request.POST.getlist("path"):
+    if raw_path_strs := set(request.POST.getlist("path")):
         logger.debug("Raw path strings: %r", raw_path_strs)
+        mapping_ids = _prepare_mapping_ids_for_tag_update(raw_path_strs)
         new_tag_names = request.POST.get("new_tag_names")
         logger.debug("New tag names: %r", new_tag_names)
-        mapping_ids = []
-        for raw_path_str in raw_path_strs:
-            mypath = MyPath(raw_path_str, True)
-            logger.debug("MyPath: %r", mypath)
-            if mapping := db.get_mapping(db_path_str=mypath.db_path_str):
-                mapping_ids.append(mapping.doc_id)
-            else:
-                mapping_ids.append(db.insert_mapping(mypath.db_path_str, []))
-        tag_ids_to_append, tag_ids_to_remove = parse_tag_ids_to_append_and_remove(
-            request.POST
+        tag_ids_to_append, tag_ids_to_remove = _parse_tag_ids_to_append_and_remove(
+            {
+                key: value
+                for key, value in request.POST.items()
+                if key.startswith("tag_")
+            },
+            new_tag_names,
         )
-        tag_ids_to_append.extend(create_tags(new_tag_names))
         logger.debug("Mapping ids to update: %r", mapping_ids)
         logger.debug("Tag ids to append: %r", tag_ids_to_append)
         logger.debug("Tag ids to remove: %r", tag_ids_to_remove)
