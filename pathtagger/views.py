@@ -6,6 +6,7 @@ from urllib.parse import quote
 
 from django.http import JsonResponse
 from django.shortcuts import redirect, render
+from tinydb.database import Document
 
 from pathtagger import db_operations as db
 from pathtagger.mypath import MyPath
@@ -14,22 +15,23 @@ from Tagger import params, settings
 logger = logging.getLogger(__name__)
 
 
-def get_extended_dataset(dataset):
+def _get_extended_dataset(dataset: List[Document]) -> List[Document]:
     if not dataset:
         logger.debug("Falsy argument for parameter 'dataset': %r", dataset)
-    for element in dataset:
-        mypath = MyPath(element["path"], False)
-        logger.debug("MyPath: %r", mypath)
-        element["abs_path_str"] = mypath.abs_path_str
-        element["system_path_str"] = str(mypath.abs_path)
-        element["db_path_str"] = mypath.db_path_str
-        element["path_exists"] = mypath.abs_path.exists()
-        element["path_is_dir"] = mypath.abs_path.is_dir()
-        if element.get("tag_ids", []):
-            element["tags"] = [
-                db.get_tag(tag_id=int(mapping_tag_id))
-                for mapping_tag_id in element["tag_ids"]
-            ]
+    else:
+        for element in dataset:
+            mypath = MyPath(element["path"], False)
+            logger.debug("MyPath: %r", mypath)
+            element["abs_path_str"] = mypath.abs_path_str
+            element["system_path_str"] = str(mypath.abs_path)
+            element["db_path_str"] = mypath.db_path_str
+            element["path_exists"] = mypath.abs_path.exists()
+            element["path_is_dir"] = mypath.abs_path.is_dir()
+            if element.get("tag_ids", []):
+                element["tags"] = [
+                    db.get_tag(tag_id=int(mapping_tag_id))
+                    for mapping_tag_id in element["tag_ids"]
+                ]
     return dataset
 
 
@@ -68,7 +70,7 @@ def mapping_details(request, mapping_id):
         request,
         "pathtagger/mapping_details.html",
         {
-            "mapping": get_extended_dataset(
+            "mapping": _get_extended_dataset(
                 [db.get_mapping(mapping_id=mapping_id)]
             ).pop()
         },
@@ -195,7 +197,7 @@ def mappings_list(request):
     logger.debug("Path name like: %r", path_name_like)
     path_type = request.GET.get("path_type", "all")
     logger.debug("Path type: %r", path_type)
-    mappings = get_extended_dataset(
+    mappings = _get_extended_dataset(
         db.get_filtered_mappings(tag_ids_to_include, tag_ids_to_exclude, path_name_like)
     )
     if path_type == "existent":
@@ -237,7 +239,7 @@ def tag_details(request, tag_id):
         "pathtagger/tag_details.html",
         {
             "tag": db.get_tag(tag_id=tag_id),
-            "mappings": get_extended_dataset(db.get_tag_mappings(tag_id)),
+            "mappings": _get_extended_dataset(db.get_tag_mappings(tag_id)),
         },
     )
 
@@ -453,5 +455,5 @@ def homepage(request):
     return render(
         request,
         "pathtagger/homepage.html",
-        {"favorites": get_extended_dataset(db.get_all_favorites())},
+        {"favorites": _get_extended_dataset(db.get_all_favorites())},
     )

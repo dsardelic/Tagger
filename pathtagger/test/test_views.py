@@ -57,26 +57,44 @@ class Test(SimpleTestCase):
         os.remove(self.db_tmp_file_name)
         logging.disable(logging.NOTSET)
 
-    def test_get_extended_dataset(self):
-        docs = db_operations.get_all_mappings()
-        extended_dataset = views.get_extended_dataset(docs)
-        self.assertTrue(len(extended_dataset) == 6)
-        self.assertTrue(
-            all(
-                key in doc
-                for doc in docs
-                for key in (
-                    "abs_path_str",
-                    "system_path_str",
-                    "db_path_str",
-                    "path_exists",
-                    "path_is_dir",
+    @parameterized.expand(
+        [
+            ("dataset is None", None),
+            ("dataset empty", []),
+        ]
+    )
+    def test__get_extended_dataset_falsy(self, _, dataset):
+        self.assertEqual(views._get_extended_dataset(dataset), dataset)
+
+    @parameterized.expand(
+        [
+            ("mixed", [1, 6], [{1}, set()]),
+        ]
+    )
+    def test__get_extended_dataset_truthy(self, _, mapping_ids, exp_tag_ids):
+        exp_keys = {
+            "abs_path_str",
+            "system_path_str",
+            "db_path_str",
+            "path_exists",
+            "path_is_dir",
+        }
+        mappings = [
+            db_operations.get_mapping(mapping_id=mapping_id)
+            for mapping_id in mapping_ids
+        ]
+        act_extended_dataset = views._get_extended_dataset(mappings)
+        self.assertTrue(len(act_extended_dataset) == len(mapping_ids))
+        for i, act_mapping in enumerate(act_extended_dataset):
+            self.assertTrue(all(key in act_mapping.keys() for key in exp_keys))
+            if exp_tag_ids[i]:
+                self.assertEqual(
+                    sorted(act_mapping["tags"]),
+                    sorted(
+                        db_operations.get_tag(tag_id=exp_tag_id)
+                        for exp_tag_id in exp_tag_ids[i]
+                    ),
                 )
-            )
-        )
-        self.assertEqual(
-            ["tags" in doc for doc in docs], [True, True, True, True, True, False]
-        )
 
     def test_get_drive_root_dirs(self):
         if os.name == "nt":
