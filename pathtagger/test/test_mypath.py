@@ -6,7 +6,6 @@ from pathtagger.mypath import MyPath
 from Tagger import params
 
 
-# pylint: disable=R0904
 class TestMyPath(unittest.TestCase):
     def setUp(self) -> None:
         logging.disable(logging.CRITICAL)
@@ -183,7 +182,7 @@ class TestMyPath(unittest.TestCase):
         ) in test_data:
             with self.subTest(raw_path=raw_path, base_path=base_path):
                 params.BASE_PATH = base_path
-                for raw_value in [raw_path, Path(raw_path)]:
+                for raw_value in (raw_path, Path(raw_path)):
                     mypath = MyPath(raw_value, True)
                     self.assertEqual(mypath.raw_path, raw_value)
                     self.assertEqual(mypath.abs_path_str, exp_abs_path_str)
@@ -197,7 +196,7 @@ class TestMyPath(unittest.TestCase):
         for base_path_str in base_path_strs:
             with self.subTest(base_path_str=base_path_str):
                 params.BASE_PATH = Path(base_path_str)
-                for base_path_value in [base_path_str, Path(base_path_str)]:
+                for base_path_value in (base_path_str, Path(base_path_str)):
                     mypath = MyPath(base_path_value, True)
                     self.assertEqual(mypath.raw_path, base_path_value)
                     self.assertEqual(mypath.abs_path_str, base_path_str)
@@ -226,7 +225,7 @@ class TestMyPath(unittest.TestCase):
         ) in test_data:
             with self.subTest(raw_path=raw_path, base_path=base_path):
                 params.BASE_PATH = base_path
-                for raw_value in [raw_path, Path(raw_path)]:
+                for raw_value in (raw_path, Path(raw_path)):
                     mypath = MyPath(raw_value, True)
                     self.assertEqual(mypath.raw_path, raw_value)
                     self.assertEqual(mypath.abs_path_str, exp_abs_path_str)
@@ -316,7 +315,7 @@ class TestMyPath(unittest.TestCase):
         ) in test_data:
             with self.subTest(raw_path=raw_path, base_path=base_path):
                 params.BASE_PATH = base_path
-                for raw_value in [raw_path, Path(raw_path)]:
+                for raw_value in (raw_path, Path(raw_path)):
                     mypath = MyPath(raw_value, False)
                     self.assertEqual(mypath.raw_path, raw_value)
                     self.assertEqual(mypath.abs_path_str, exp_abs_path_str)
@@ -334,7 +333,7 @@ class TestMyPath(unittest.TestCase):
         for base_path_str, exp_abs_path_str in test_data:
             with self.subTest(base_path_str=base_path_str):
                 params.BASE_PATH = Path(base_path_str)
-                for base_path_value in [base_path_str, Path(base_path_str)]:
+                for base_path_value in (base_path_str, Path(base_path_str)):
                     mypath = MyPath(base_path_value, False)
                     self.assertEqual(mypath.raw_path, base_path_value)
                     self.assertEqual(mypath.abs_path_str, exp_abs_path_str)
@@ -366,7 +365,7 @@ class TestMyPath(unittest.TestCase):
         ) in test_data:
             with self.subTest(raw_path=raw_path, base_path=base_path):
                 params.BASE_PATH = base_path
-                for raw_value in [raw_path, Path(raw_path)]:
+                for raw_value in (raw_path, Path(raw_path)):
                     mypath = MyPath(raw_value, False)
                     self.assertEqual(mypath.raw_path, raw_value)
                     self.assertEqual(mypath.abs_path_str, exp_abs_path_str)
@@ -456,3 +455,7 @@ class TestMyPath(unittest.TestCase):
                     self.assertEqual(
                         mypath.is_valid_db_path_str, exp_is_valid_db_path_str
                     )
+
+    def test_get_children(self):
+        # TODO: write test
+        pass
