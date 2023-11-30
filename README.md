@@ -19,11 +19,13 @@ Tagger is a Python (3.11) web application created using the Django (3.0.2) frame
 ## How do I use it?
 
 Before running the application check out the [Tagger.ini](Tagger.ini) file in order to:
-* Name an optional absolute path to the JSON file to be used as a database. The default value is the project's root folder, i.e. the one in which Tagger.ini resides. If no file exists in the selected location, it will be created automatically.
+* Name an optional absolute path to the JSON file to be used as a database. The default database file is [TaggerDB.json](TaggerDB.json) in the project's root folder, i.e. the folder in which Tagger.ini resides. A sample pre-filled database is already provided. Feel free to delete it. If no file exists in the default or user-selected location, an empty database file will be created automatically upon running the application.
 * Select an optional base path, the one which will be prepended to all paths in the database. Database paths are otherwise treated as absolute paths.
 * Select an optional hexadecimal code of the default color for new tags. The default value is otherwise gray (RGB #d9d9d9).
 
 Simply uncomment and enter the desired value(s).
+
+After running the application, the Tagger app is accessible under `/pathtagger/` relative URL (e.g. `http://localhost:8000/pathtagger/`).
 
 The application has 4 modules:
 * Homepage
