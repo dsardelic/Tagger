@@ -7,36 +7,43 @@ from Tagger import params
 
 
 class MyPath:
-    NT_ABS_PATH_STR_REGEX = r"^[A-Za-z]:[\\\/]"
-    NT_DB_PATH_STR_REGEX = r"^[\\\/]"
+    NT_ABS_PATH_STR_REGEX = r"^[A-Za-z]:[\\\/]?"
 
     def __init__(self, raw_path: Union[Path, str], is_abs_path: bool):
         self.raw_path = raw_path
-        if raw_path is None:
+        if any(
+            (
+                raw_path is None,
+                os.name == "posix" and not str(raw_path).startswith("/"),
+                os.name == "nt"
+                and (
+                    (
+                        is_abs_path
+                        and not re.match(self.NT_ABS_PATH_STR_REGEX, str(raw_path))
+                    )
+                    or (
+                        not is_abs_path
+                        and params.BASE_PATH
+                        and not str(raw_path).startswith("/")
+                    )
+                ),
+            )
+        ):
             self.abs_path_str = None
-            return
-        # no weird db_paths allowed
-        if os.name == "posix" and not str(raw_path).startswith("/"):
-            self.abs_path_str = None
-            return
-        if os.name == "nt":
-            if (
-                is_abs_path and not re.match(self.NT_ABS_PATH_STR_REGEX, str(raw_path))
-            ) or (
-                not is_abs_path
-                and not re.match(self.NT_DB_PATH_STR_REGEX, str(raw_path))
-            ):
-                self.abs_path_str = None
-                return
-        formatted_raw_path_str = Path(raw_path).as_posix().strip("/")
-        if isinstance(Path(raw_path), PosixPath):
-            formatted_raw_path_str = "/" + formatted_raw_path_str
-        if is_abs_path or not params.BASE_PATH:
-            self.abs_path_str = formatted_raw_path_str
+        elif os.name == "nt" and re.fullmatch(
+            self.NT_ABS_PATH_STR_REGEX, str(raw_path)
+        ):
+            self.abs_path_str = Path(raw_path).as_posix()[:2] + "/"
         else:
-            self.abs_path_str = params.BASE_PATH.joinpath(
-                formatted_raw_path_str.lstrip("/")
-            ).as_posix()
+            formatted_raw_path_str = Path(raw_path).as_posix().strip("/")
+            if isinstance(Path(raw_path), PosixPath):
+                formatted_raw_path_str = "/" + formatted_raw_path_str
+            if is_abs_path or not params.BASE_PATH:
+                self.abs_path_str = formatted_raw_path_str
+            else:
+                self.abs_path_str = params.BASE_PATH.joinpath(
+                    formatted_raw_path_str.lstrip("/")
+                ).as_posix()
 
     @property
     def db_path_str(self) -> Optional[str]:

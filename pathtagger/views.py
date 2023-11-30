@@ -422,9 +422,9 @@ def edit_path_tags(request):
 
 
 def toggle_favorite_path(request):
-    abs_path_str = request.POST.get("path")
-    logger.debug("Absolute path string: %r", abs_path_str)
-    mypath = MyPath(abs_path_str, True)
+    path_str = request.POST.get("path")
+    logger.debug("Absolute path string: %r", path_str)
+    mypath = MyPath(path_str, os.name == "nt" and params.BASE_PATH is None)
     logger.debug("MyPath: %r", mypath)
     if mypath.is_valid_db_path_str:
         if db.get_favorite(mypath.db_path_str):
