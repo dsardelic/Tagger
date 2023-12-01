@@ -6,7 +6,6 @@ load-plugins =  pylint.extensions.bad_builtin,
                 pylint.extensions.broad_try_clause,
                 pylint.extensions.check_elif,
                 pylint.extensions.code_style,
-                pylint.extensions.comparetozero,
                 pylint.extensions.comparison_placement,
                 pylint.extensions.confusing_elif,
                 pylint.extensions.consider_refactoring_into_while_condition,
@@ -16,7 +15,6 @@ load-plugins =  pylint.extensions.bad_builtin,
                 pylint.extensions.docstyle,
                 pylint.extensions.dunder,
                 pylint.extensions.empty_comment,
-                pylint.extensions.emptystring,
                 pylint.extensions.eq_without_hash,
                 pylint.extensions.for_any_all,
                 # pylint.extensions.magic_value,
@@ -41,7 +39,9 @@ enable =    bad-inline-option, # I0010
             deprecated-pragma, # I0022
             file-ignored, # I0013
             use-symbolic-message-instead, # I0023
-            useless-suppression # I0021
+            useless-suppression, # I0021
+            use-implicit-booleaness-not-comparison-to-string, # C1804
+            use-implicit-booleaness-not-comparison-to-zero # C1805
 
 [FORMAT]
 max-line-length=88
